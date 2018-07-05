@@ -3,7 +3,8 @@ function namespace(namespace,name) {
 }
 
 function denamespace(value){
-    return value.split(':')[1];
+    //TODO make more efficient
+    return value.split(':').slice(1).join(':');
 }
 
 //maps user availible calls to redis calls with namespacing

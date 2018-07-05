@@ -27,7 +27,7 @@ module.exports = (ws) => {
         const message = JSON.parse(data);
         if (message.type !== 'login')
             throw new Error('Not logged in');
-        const user = UserManager.login(message.username, message.password);
+        UserManager.login(message.username, message.password);
 
         //set up heartbeat
         ws.isAlive = true;
@@ -51,7 +51,7 @@ module.exports = (ws) => {
         function get(id) {
             if (!clientCache[id]) {
                 clientCache[id] = new ClientManager(id, (channel, message)=>{
-                    ws.send();
+                    ws.send(J);
                 });
             }
             return clientCache[id];
