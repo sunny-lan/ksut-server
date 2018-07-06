@@ -1,7 +1,9 @@
-const { version, heartbeat } = require('./config');
 const serializeError = require('serialize-error');
-const { UserManager } = require('../db/user');
-const { ClientManager } = require('../db/client');
+const { UserManager } = require('./user');
+const { version, heartbeat } = require('./config');
+const { ReadSet, WriteSet, PubSubSet, namespace } = require('./namespacing');
+const { wrap } = require('./commandset');
+const { db, create } = require('./db');
 
 function wsExceptionGuard(ws, action) {
     return (...args) => {
@@ -27,7 +29,7 @@ module.exports = (ws) => {
         const message = JSON.parse(data);
         if (message.type !== 'login')
             throw new Error('Not logged in');
-        UserManager.login(message.username, message.password);
+        const user = UserManager.login(message.username, message.password);
 
         //set up heartbeat
         ws.isAlive = true;
@@ -38,41 +40,41 @@ module.exports = (ws) => {
             ws.ping();
         }, heartbeat);
 
+        const sub = create();
+
+        //set up command handler
+        const commands = Object.assign(
+            wrap(new WriteSet(user, writePipeWrapper), db),
+            wrap(new ReadSet(user), db),
+            wrap(new PubSubSet(user), sub),
+        );
+
+        //pipe db updates to its own channel so clients can live update
+        function writePipeWrapper(command, commandName) {
+            return (ns, ...args) => {
+                function nsReplacement(key) {
+                    commands.publish(namespace('write', key), JSON.stringify({
+                        command: commandName,
+                        args
+                    }));
+                    return ns(key);
+                }
+                return command(nsReplacement, ...args);
+            };
+        }
+
         //handle messages from user
         ws.on('message', wsExceptionGuard(ws, data => {
             const message = JSON.parse(data);
             if (message.type === 'command') {
-                handleCommand(message);
+                commands[message.command](...message.args);
             } else
                 throw new Error('Invalid message type');
         }));
 
-        const clientCache = {};
-        function get(id) {
-            if (!clientCache[id]) {
-                clientCache[id] = new ClientManager(id, (channel, message)=>{
-                    ws.send(J);
-                });
-            }
-            return clientCache[id];
-        }
-
-        async function handleCommand(message) {
-            //actually call command
-            const commandFunction = get(message.source).commands[message.command];
-            const result = await commandFunction(...message.args);
-            //send result
-            ws.send(JSON.stringify({
-                type: 'result',
-                id: message.id,//optional id to track response
-                result,
-            }));
-        }
-
         //clean up on disconnect
         ws.on('disconnect', () => {
             clearInterval(pingTimer);
-            Promise.all(Object.keys(clientCache).map(clientID => clientCache[clientID].quit()));
         });
     }));
 };

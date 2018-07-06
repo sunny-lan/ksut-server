@@ -2,3 +2,4 @@
 /.eslintrc.json
 /.idea
 /.gitignore
+/redis-config.json

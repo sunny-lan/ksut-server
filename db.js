@@ -3,9 +3,14 @@ const redis = require('redis');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
-module.exports = {
-    create() {
+function create() {
+    if (process.env.NODE && ~process.env.NODE.indexOf('heroku'))
         return redis.createClient(process.env.REDIS_URL);
-    },
-    db: this.create(),
+    else
+        return redis.createClient(require('./redis-config'));
+}
+
+module.exports = {
+    create,
+    db: create(),
 };

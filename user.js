@@ -1,6 +1,6 @@
 const passwordHash = require('password-hash');
+const uuid=require('uuid/v4');
 const { db } = require('./db');
-const { Client, ClientManager } = require('./client');
 
 const tables = {
     password: 'user-password',
@@ -8,27 +8,29 @@ const tables = {
 };
 
 const UserManager = {
-    add: ClientManager.add, //TODO sketchy extend
+    async add( name, password) {
 
-    async _add(id, name, password) {
-        const added = new User(id);
+        const added = new User(uuid());
         await Promise.all([
-            ClientManager.add(id, name, password),
             added.setPassword(password),
-            db.hset(tables.username, name, id) //username
+            db.hset(tables.username, name, added.id) //username
         ]);
         return added;
     },    
 
-    async login(id, password) {
-        const passwordHash = await db.hget(tables.password, id);
+    async login(username, password) {
+        const passwordHash = await db.hget(tables.password, username);
         if (passwordHash.verify(password, passwordHash))
-            return new User(id);
+            return new User(username);
         throw new Error('Invalid login');
     },
 };
 
-class User extends Client {
+class User {
+    constructor(id){
+        this.id=id;
+    }
+
     setName() {
         throw new Error('Cannot set username');
     }
