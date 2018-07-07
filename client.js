@@ -1,5 +1,5 @@
 const { UserManager } = require('./db/user');
-const { version, heartbeat } = require('./config');
+const config = require('./config');
 const { create } = require('./db');
 const createWrapped = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
@@ -25,7 +25,7 @@ module.exports = (ws) => {
     //init message, client should check version match
     ws.send(JSON.stringify({
         type: 'init',
-        version
+        version: config.version
     }));
 
     //wait for client to login
@@ -34,7 +34,13 @@ module.exports = (ws) => {
         const message = JSON.parse(data);
         if (message.type !== 'login')
             throw new Error('Not logged in');
-        const user = await UserManager.login(message.username, message.password);
+        let user;
+        try {
+            user = await UserManager.login(message.username, message.password);
+        } catch (error) {
+            setTimeout(ws.terminate, config.waitTerminate);
+            throw error;
+        }
 
         //tell user they were successful
         ws.send(JSON.stringify({ type: 'loginSuccess' }));
@@ -46,13 +52,13 @@ module.exports = (ws) => {
             if (!ws.isAlive) return ws.terminate();
             ws.isAlive = false;
             try { ws.ping(); } catch (error) { ws.terminate(); }
-        }, heartbeat);
+        }, config.heartbeat);
 
         //create redis client for this subscriber
         const sub = create();
         sub.on('message', (channel, message) => ws.send(JSON.stringify({
-            type:'message',
-            channel, 
+            type: 'message',
+            channel,
             message: JSON.parse(message),
         })));
 
