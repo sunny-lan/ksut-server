@@ -5,6 +5,10 @@ function namespace(space, name) {
     return `${space}:${name}`;
 }
 
+function denamespace(namespaced) {
+    return namespaced.substring(namespaced.indexOf(':') + 1);
+}
+
 function wrapAll(spec, wrapper) {
     return Object.keys(spec).reduce((output, command) => {
         output[command] = wrapper(spec[command], command);
@@ -13,9 +17,18 @@ function wrapAll(spec, wrapper) {
 }
 
 function makeAPIWrapper(api, namespacer) {
-    return function apiWrapper(argMapper, command) {
-        return (...args) => {
-            return api[command + 'Async'](argMapper(namespacer, ...args));
+    return function apiWrapper(mapper, command) {
+        let argMapper, resultMapper;
+        if (typeof mapper === 'function')
+            argMapper = mapper;
+        else
+            [argMapper, resultMapper] = mapper;
+
+        return async (...args) => {
+            let result = await api[command + 'Async'](argMapper(namespacer, ...args));
+            if (resultMapper)
+                result = resultMapper(denamespace, result);
+            return result;
         };
     };
 }
@@ -26,6 +39,7 @@ function createWrapped(sub, user) {
     }
     const commands = Object.assign({},
         wrapAll(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
+        //TODO denamespace result
         wrapAll(specs.sub, makeAPIWrapper(sub, namespacer)),
         wrapAll(specs.write, (argNumber, command) => {
             const apiCall = db[command + 'Async'].bind(db);
