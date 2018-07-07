@@ -11,7 +11,7 @@ const tables = {
 const UserManager = {
     async add(username, password) {
         if (await db.hexistsAsync(tables.loginID, username))
-            throw new Error('username is taken');    
+            throw new Error('username is taken');
         const added = new User(uuid());
         await Promise.all([
             added.setPassword(password),
@@ -23,9 +23,11 @@ const UserManager = {
 
     async login(username, password) {
         const id = await db.hgetAsync(tables.loginID, username);
-        const hash = await db.hgetAsync(tables.password, id);
-        if (passwordHash.verify(password, hash))
-            return new User(id);
+        if (id) {
+            const hash = await db.hgetAsync(tables.password, id);
+            if (passwordHash.verify(password, hash))
+                return new User(id);
+        }
         throw new Error('Invalid login');
     },
 };
@@ -39,7 +41,7 @@ class User {
         await db.hsetAsync(tables.password, this.id, passwordHash.generate(password));
     }
 
-    async getUsername(){
+    async getUsername() {
         return db.hgetAsync(tables.username, this.id);
     }
 
@@ -47,9 +49,9 @@ class User {
         await Promise.all([
             db.hdelAsync(tables.password, this.id), //password
             this.getUsername().then(name => Promise.all([
-            	db.hdelAsync(tables.loginID, name), //login table
-				db.hdelAsync(tables.username, this.id) //name table
-			])),
+                db.hdelAsync(tables.loginID, name), //login table
+                db.hdelAsync(tables.username, this.id) //name table
+            ])),
         ]);
     }
 

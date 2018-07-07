@@ -1,35 +1,36 @@
 const WebSocket = require('ws');
-const { UserManager } = require('../db/user');
-const { db } = require('../db');
-(async () => {
-    await db.flushdbAsync();
-    await UserManager.add('sunny', 'aa');
+//const { UserManager } = require('../db/user');
+// const { db } = require('../db');
 
-    const ws = new WebSocket('http://localhost:8080');
+(async () => {
+    // await db.flushdbAsync();
+    // await UserManager.add('sunny', 'aa');
+
+    const ws = new WebSocket('https://cryptic-chamber-92728.herokuapp.com/');
     function s(a) {
         ws.send(JSON.stringify(a));
     }
 
-    function begin(){
+    function begin() {
         s({
-            type:'command',
-            command:'subscribe',
-            args:['write:heloo']
+            type: 'command',
+            command: 'subscribe',
+            args: ['write:heloo']
         });
         s({
-            type:'command',
-            command:'set',
-            args:['heloo','cust']
+            type: 'command',
+            command: 'set',
+            args: ['heloo', 'cust']
         });
         s({
-            type:'command',
-            command:'get',
-            args:['heloo']
+            type: 'command',
+            command: 'get',
+            args: ['heloo'],
         });
         s({
-            type:'command',
-            command:'publish',
-            args:['reet', 'helo']
+            type: 'command',
+            command: 'publish',
+            args: ['reet', 'helo'],
         });
     }
 
@@ -43,4 +44,5 @@ const { db } = require('../db');
         setTimeout(begin, 500);
     });
     ws.on('message', console.log);
+    ws.on('ping', ()=>console.log('ping'));
 })().catch(e => { console.error(e); process.exit(-1); });
