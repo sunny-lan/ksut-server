@@ -1,35 +1,43 @@
-const serializeError = require('serialize-error');
-const { UserManager } = require('./user');
+const { UserManager } = require('./db/user');
 const { version, heartbeat } = require('./config');
-const { ReadSet, WriteSet, PubSubSet, namespace } = require('./namespacing');
-const { wrap } = require('./commandset');
-const { db, create } = require('./db');
+const { create } = require('./db');
+const createWrapped = require('./command/wrap');
+const { isHeroku } = require('./heroku');
+let se;
+if (isHeroku())
+    se = require('serialize-error');
 
 function wsExceptionGuard(ws, action) {
     return (...args) => {
-        try {
-            action(...args);
-        } catch (error) {
-            ws.send(JSON.stringify({
+        //try to run the action as a promise
+        Promise.resolve(action(...args)).catch(
+            error => ws.send(JSON.stringify({
+                //caught errors are sent to the client
                 type: 'error',
-                error: serializeError(error)
-            }));
-        }
+                error: se ? se(error) : error.message
+            }))
+        );
+        //TODO:handle return values
     };
 }
 
 module.exports = (ws) => {
+    //init message, client should check version match
     ws.send(JSON.stringify({
         type: 'init',
         version
     }));
 
-    //wait for login message
-    ws.once('message', wsExceptionGuard(ws, data => {
+    //wait for client to login
+    ws.once('message', wsExceptionGuard(ws, async data => {
+        //check login
         const message = JSON.parse(data);
         if (message.type !== 'login')
             throw new Error('Not logged in');
-        const user = UserManager.login(message.username, message.password);
+        const user = await UserManager.login(message.username, message.password);
+
+        //tell user they were successful
+        ws.send(JSON.stringify({ type: 'loginSuccess' }));
 
         //set up heartbeat
         ws.isAlive = true;
@@ -37,37 +45,30 @@ module.exports = (ws) => {
         const pingTimer = setInterval(() => {
             if (!ws.isAlive) return ws.terminate();
             ws.isAlive = false;
-            ws.ping();
+            try { ws.ping(); } catch (error) { ws.terminate(); }
         }, heartbeat);
 
+        //create redis client for this subscriber
         const sub = create();
+        sub.on('message', (channel, message) => ws.send(JSON.stringify({
+            type:'message',
+            channel, 
+            message: JSON.parse(message),
+        })));
 
-        //set up command handler
-        const commands = Object.assign(
-            wrap(new WriteSet(user, writePipeWrapper), db),
-            wrap(new ReadSet(user), db),
-            wrap(new PubSubSet(user), sub),
-        );
-
-        //pipe db updates to its own channel so clients can live update
-        function writePipeWrapper(command, commandName) {
-            return (ns, ...args) => {
-                function nsReplacement(key) {
-                    commands.publish(namespace('write', key), JSON.stringify({
-                        command: commandName,
-                        args
-                    }));
-                    return ns(key);
-                }
-                return command(nsReplacement, ...args);
-            };
-        }
+        //create command set
+        const commands = createWrapped(sub, user);
 
         //handle messages from user
-        ws.on('message', wsExceptionGuard(ws, data => {
+        ws.on('message', wsExceptionGuard(ws, async data => {
             const message = JSON.parse(data);
             if (message.type === 'command') {
-                commands[message.command](...message.args);
+                //run command and send back response
+                ws.send(JSON.stringify({
+                    type: 'messageResponse',
+                    id: message.id,
+                    response: await commands[message.command](...message.args),
+                }));
             } else
                 throw new Error('Invalid message type');
         }));
@@ -75,6 +76,7 @@ module.exports = (ws) => {
         //clean up on disconnect
         ws.on('disconnect', () => {
             clearInterval(pingTimer);
+            sub.quit();
         });
     }));
 };

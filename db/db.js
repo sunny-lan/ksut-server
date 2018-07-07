@@ -1,16 +1,19 @@
 const bluebird = require('bluebird');
 const redis = require('redis');
+const { isHeroku } = require('../heroku');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
 function create() {
-    if (process.env.NODE && ~process.env.NODE.indexOf('heroku'))
+    if (isHeroku())
         return redis.createClient(process.env.REDIS_URL);
     else
         return redis.createClient(require('./redis-config'));
 }
 
+const db = create();
+
 module.exports = {
     create,
-    db: create(),
+    db,
 };
