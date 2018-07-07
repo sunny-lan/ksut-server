@@ -64,6 +64,7 @@ module.exports = (ws) => {
 
         //create command set
         const commands = createWrapped(sub, user);
+        commands.goodVibrations = () => { throw new Error('tinkle hoy'); };
 
         //handle messages from user
         ws.on('message', wsExceptionGuard(ws, async data => {
