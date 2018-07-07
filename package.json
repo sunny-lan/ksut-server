@@ -1,7 +1,7 @@
 {
   "name": "ksut-server",
   "version": "1.0.0",
-  "description": "",
+  "description": "server of ksut iot project",
   "main": "index.js",
   "engines": {
     "node": "8.9.4"
@@ -14,6 +14,8 @@
   "license": "ISC",
   "dependencies": {
     "bluebird": "^3.5.1",
+    "express": "^4.16.3",
+    "express-ws": "^4.0.0",
     "password-hash": "^1.2.2",
     "redis": "^2.8.0",
     "uuid": "^3.3.2",

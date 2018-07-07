@@ -5,7 +5,7 @@ const { db } = require('../db');
     await db.flushdbAsync();
     await UserManager.add('sunny', 'aa');
 
-    const ws = new WebSocket('ws://localhost:8080');
+    const ws = new WebSocket('http://localhost:8080');
     function s(a) {
         ws.send(JSON.stringify(a));
     }

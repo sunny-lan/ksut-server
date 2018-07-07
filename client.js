@@ -2,10 +2,10 @@ const { UserManager } = require('./db/user');
 const { version, heartbeat } = require('./config');
 const { create } = require('./db');
 const createWrapped = require('./command/wrap');
-const { isHeroku } = require('./dev');
-let se;
+const { isHeroku } = require('./config/dev');
+let serializeError;
 if (isHeroku())
-    se = require('serialize-error');
+    serializeError = require('serialize-error');
 
 function wsExceptionGuard(ws, action) {
     return (...args) => {
@@ -14,7 +14,7 @@ function wsExceptionGuard(ws, action) {
             error => ws.send(JSON.stringify({
                 //caught errors are sent to the client
                 type: 'error',
-                error: se ? se(error) : error.message
+                error: serializeError ? serializeError(error) : error.message
             }))
         );
         //TODO:handle return values

@@ -1,6 +1,6 @@
 const bluebird = require('bluebird');
 const redis = require('redis');
-const { isHeroku } = require('../dev');
+const { isHeroku } = require('../config/dev');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 

@@ -1,0 +1,5 @@
+{
+    "version":1,
+    "heartbeat":1000,
+    "defaultPort":8080
+}
