@@ -1,4 +1,4 @@
-const { UserManager } = require('./db/user');
+const UserManager = require('./db/user');
 const config = require('./config');
 const { create } = require('./db');
 const createWrapped = require('./command/wrap');

@@ -1,6 +1,5 @@
 const { db } = require('../db');
-const user = require('../db/user');
-const mgr = user.UserManager;
+const mgr = require('../db/user');
 (async () => {
     await db.flushdbAsync();
     const user = await mgr.add('sunny', 'aa');

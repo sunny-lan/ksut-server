@@ -39,7 +39,7 @@ function createWrapped(sub, user) {
     }
     const commands = Object.assign({},
         wrapAll(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
-        //TODO denamespace result
+        //TODO: denamespace result
         wrapAll(specs.sub, makeAPIWrapper(sub, namespacer)),
         wrapAll(specs.write, (argNumber, command) => {
             const apiCall = db[command + 'Async'].bind(db);

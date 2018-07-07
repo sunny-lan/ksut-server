@@ -1,11 +1,12 @@
 const passwordHash = require('password-hash');
 const uuid = require('uuid/v4');
-const { db } = require('./db');
+const {db} = require('./db');
+const config = require('../config');
 
 const tables = {
     password: 'user-password',
     loginID: 'username-user',
-    username: 'user-username'
+    username: 'user-username',
 };
 
 const UserManager = {
@@ -32,6 +33,19 @@ const UserManager = {
     },
 };
 
+//this runs the first time server is started
+async function initDB() {
+    if (await db.getAsync('ranBefore')) return;
+    console.log('First time running, resetting database...');
+    await db.flushdbAsync();
+    await Promise.all([
+        db.setAsync('ranBefore', true),
+        UserManager.add(config.adminUsername, config.defaultAdminPassword),
+    ]);
+    console.log('success')
+}
+initDB().catch(error => console.error('failed initializing db', error));
+
 class User {
     constructor(id) {
         this.id = id;
@@ -54,8 +68,6 @@ class User {
             ])),
         ]);
     }
-
 }
 
-module.exports.UserManager = UserManager;
-module.exports.User = User;
+module.exports = UserManager;
