@@ -2,7 +2,7 @@ const { UserManager } = require('./db/user');
 const { version, heartbeat } = require('./config');
 const { create } = require('./db');
 const createWrapped = require('./command/wrap');
-const { isHeroku } = require('./heroku');
+const { isHeroku } = require('./dev');
 let se;
 if (isHeroku())
     se = require('serialize-error');
