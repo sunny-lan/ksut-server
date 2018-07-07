@@ -1,12 +1,12 @@
 const WebSocket = require('ws');
-const { UserManager } = require('../db/user');
-const { db } = require('../db');
+// const { UserManager } = require('../db/user');
+// const { db } = require('../db');
 
 (async () => {
-    await db.flushdbAsync();
-    await UserManager.add('sunny', 'aa');
+    // await db.flushdbAsync();
+    // await UserManager.add('sunny', 'aa');
 
-    const ws = new WebSocket('http://localhost:8080');
+    const ws = new WebSocket('https://cryptic-chamber-92728.herokuapp.com/');
     function s(a) {
         ws.send(JSON.stringify(a));
     }

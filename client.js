@@ -4,7 +4,7 @@ const { create } = require('./db');
 const createWrapped = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 let serializeError;
-if (isHeroku())
+if (!isHeroku())
     serializeError = require('serialize-error');
 
 function wsExceptionGuard(ws, action) {
