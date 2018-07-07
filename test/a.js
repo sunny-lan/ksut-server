@@ -11,6 +11,16 @@ const WebSocket = require('ws');
         ws.send(JSON.stringify(a));
     }
 
+    ws.on('open', () => {
+        console.log('open');
+        s({
+            type: 'login',
+            username: 'admin',
+            password: 'pass'
+        });
+        setTimeout(begin, 500);
+    });
+
     function begin() {
         s({
             type: 'command',
@@ -34,15 +44,6 @@ const WebSocket = require('ws');
         });
     }
 
-    ws.on('open', () => {
-        console.log('open');
-        s({
-            type: 'login',
-            username: 'suanny',
-            password: 'aa'
-        });
-        setTimeout(begin, 500);
-    });
     ws.on('message', console.log);
     ws.on('ping', ()=>console.log('ping'));
     ws.on('disconnect', ()=>console.log('disconnect'));
