@@ -4,7 +4,9 @@ const { create } = require('./db');
 const createWrapped = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 let serializeError;
-if (!isHeroku())
+if (isHeroku())
+    serializeError = error => error.message;
+else
     serializeError = require('serialize-error');
 
 function wsExceptionGuard(ws, action) {
@@ -14,7 +16,7 @@ function wsExceptionGuard(ws, action) {
             error => ws.send(JSON.stringify({
                 //caught errors are sent to the client
                 type: 'error',
-                error: serializeError ? serializeError(error) : error.message
+                error: serializeError(error)
             }))
         );
         //TODO:handle return values
@@ -71,11 +73,22 @@ module.exports = (ws) => {
             const message = JSON.parse(data);
             if (message.type === 'command') {
                 //run command and send back response
-                ws.send(JSON.stringify({
-                    type: 'messageResponse',
-                    id: message.id,
-                    response: await commands[message.command](...message.args),
-                }));
+                let result;
+                try {
+                    result = await commands[message.command](...message.args);
+                    result = {
+                        type: 'commandResult',
+                        id: message.id,
+                        result,
+                    };
+                } catch (error) {
+                    result = {
+                        type: 'commandError',
+                        id: message.id,
+                        error: serializeError(error)
+                    };
+                }
+                ws.send(JSON.stringify(result));
             } else
                 throw new Error('Invalid message type');
         }));
