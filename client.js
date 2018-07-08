@@ -1,7 +1,7 @@
 const UserManager = require('./db/user');
 const config = require('./config');
 const { create } = require('./db');
-const { createWrapped, denamespace } = require('./command/wrap');
+const { createWrapped, getName } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 let serializeError;
 if (isHeroku())
@@ -60,7 +60,7 @@ module.exports = (ws) => {
         const sub = create();
         sub.on('message', (channel, message) => ws.send(JSON.stringify({
             type: 'message',
-            channel: denamespace(channel),
+            channel: getName(channel),
             message: JSON.parse(message),
         })));
 

@@ -5,7 +5,7 @@ module.exports = {
     sub: {
         subscribe: [
             (ns, channel, ...channels) => [ns(channel), ...channels.map(ns)], //arg mapper
-            (dns, channel) => dns(channel), //result mapper
+            (gn, channel) => gn(channel), //result mapper
         ],
     },
     read: {

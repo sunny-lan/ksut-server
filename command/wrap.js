@@ -5,7 +5,7 @@ function namespace(space, name) {
     return `${space}:${name}`;
 }
 
-function denamespace(namespaced) {
+function getName(namespaced) {
     return namespaced.substring(namespaced.indexOf(':') + 1);
 }
 
@@ -27,7 +27,7 @@ function makeAPIWrapper(api, namespacer) {
         return async (...args) => {
             let result = await api[command + 'Async'](argMapper(namespacer, ...args));
             if (resultMapper)
-                result = resultMapper(denamespace, result);
+                result = resultMapper(getName, result);
             return result;
         };
     };
@@ -39,7 +39,6 @@ function createWrapped(sub, user) {
     }
     const commands = Object.assign({},
         wrapAll(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
-        //TODO: denamespace result
         wrapAll(specs.sub, makeAPIWrapper(sub, namespacer)),
         wrapAll(specs.write, (argNumber, command) => {
             const apiCall = db[command + 'Async'].bind(db);
@@ -57,4 +56,4 @@ function createWrapped(sub, user) {
     return commands;
 }
 
-module.exports = {createWrapped, denamespace};
+module.exports = {createWrapped, getName};
