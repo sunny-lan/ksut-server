@@ -12,7 +12,7 @@ else
 function wsExceptionGuard(ws, action) {
     return (...args) => {
         //try to run the action as a promise
-        Promise.resolve(action(...args)).catch(
+        (async()=>action(...args))().catch(
             error => ws.send(JSON.stringify({
                 //caught errors are sent to the client
                 type: 'error',
