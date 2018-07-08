@@ -58,11 +58,11 @@ module.exports = (ws) => {
 
         //create redis client for this subscriber
         const sub = create();
-        sub.on('message', (channel, message) => ws.send(JSON.stringify({
+        sub.on('message', wsExceptionGuard(ws, (channel, message) => ws.send(JSON.stringify({
             type: 'message',
             channel: getName(channel),
             message: JSON.parse(message),
-        })));
+        }))));
 
         //create command set
         const commands = createWrapped(sub, user);
