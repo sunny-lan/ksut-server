@@ -7,6 +7,7 @@ const tables = {
     password: 'user-password',
     loginID: 'username-user',
     username: 'user-username',
+    scripts: 'script-code'
 };
 
 const UserManager = {

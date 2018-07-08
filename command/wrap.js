@@ -56,4 +56,4 @@ function createWrapped(sub, user) {
     return commands;
 }
 
-module.exports = {createWrapped, getName};
+module.exports = {createWrapped, getName, namespace};

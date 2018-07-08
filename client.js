@@ -1,7 +1,7 @@
 const UserManager = require('./db/user');
 const config = require('./config');
 const { create } = require('./db');
-const { createWrapped, getName } = require('./command/wrap');
+const { createWrapped, getName, namespace } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 let serializeError;
 if (isHeroku())
@@ -12,7 +12,7 @@ else
 function wsExceptionGuard(ws, action) {
     return (...args) => {
         //try to run the action as a promise
-        (async()=>action(...args))().catch(
+        (async () => action(...args))().catch(
             error => ws.send(JSON.stringify({
                 //caught errors are sent to the client
                 type: 'error',
@@ -66,7 +66,16 @@ module.exports = (ws) => {
 
         //create command set
         const commands = createWrapped(sub, user);
-        commands.goodVibrations = () => { throw new Error('tinkle hoy'); };
+        commands.goodVibrations = (god) => {
+            if (god)
+                throw new Error('tinkle hoy');
+            else
+                return '1.129848';
+        };
+        Object.getOwnPropertyNames(Object.getPrototypeOf(user)).forEach(key => {
+            if (typeof user[key] === 'function') 
+                commands[namespace('user', key)] = user[key].bind(user);
+        });
 
         //handle messages from user
         ws.on('message', wsExceptionGuard(ws, async data => {
@@ -82,7 +91,7 @@ module.exports = (ws) => {
                     response.subType = 'result';
                 } catch (error) {
                     response.subType = 'error';
-                    response.error = error;
+                    response.error = serializeError(error);
                 }
                 ws.send(JSON.stringify(response));
             } else

@@ -13,6 +13,8 @@
   "author": "sunny-lan",
   "license": "ISC",
   "dependencies": {
+    "@babel/standalone": "^7.0.0-beta.52",
+    "babel-plugin-transform-react-jsx": "^6.24.1",
     "bluebird": "^3.5.1",
     "express": "^4.16.3",
     "express-ws": "^4.0.0",
