@@ -1,7 +1,7 @@
 const UserManager = require('./db/user');
 const config = require('./config');
 const { create } = require('./db');
-const createWrapped = require('./command/wrap');
+const { createWrapped, denamespace } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 let serializeError;
 if (isHeroku())
@@ -60,7 +60,7 @@ module.exports = (ws) => {
         const sub = create();
         sub.on('message', (channel, message) => ws.send(JSON.stringify({
             type: 'message',
-            channel,
+            channel: denamespace(channel),
             message: JSON.parse(message),
         })));
 
@@ -73,22 +73,18 @@ module.exports = (ws) => {
             const message = JSON.parse(data);
             if (message.type === 'command') {
                 //run command and send back response
-                let result;
+                let response = {
+                    type: 'commandResponse',
+                    id: message.id,
+                };
                 try {
-                    result = await commands[message.command](...message.args);
-                    result = {
-                        type: 'commandResult',
-                        id: message.id,
-                        result,
-                    };
+                    response.result = await commands[message.command](...message.args);
+                    response.subType = 'result';
                 } catch (error) {
-                    result = {
-                        type: 'commandError',
-                        id: message.id,
-                        error: serializeError(error)
-                    };
+                    response.subType = 'error';
+                    response.error = error;
                 }
-                ws.send(JSON.stringify(result));
+                ws.send(JSON.stringify(response));
             } else
                 throw new Error('Invalid message type');
         }));
