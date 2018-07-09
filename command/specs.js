@@ -12,6 +12,7 @@ module.exports = {
         get: (ns, key) => [ns(key)],
     },
     write: {
-        set: 0
+        set: 0,
+        hset: 0
     },
 };

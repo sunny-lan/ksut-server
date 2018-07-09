@@ -8,8 +8,11 @@ function namespace(space, name) {
 function getName(namespaced) {
     return namespaced.substring(namespaced.indexOf(':') + 1);
 }
+function getNamespace(namespaced) {
+    return namespaced.substring(0, namespaced.indexOf(':'));
+}
 
-function wrapAll(spec, wrapper) {
+function wrapSpec(spec, wrapper) {
     return Object.keys(spec).reduce((output, command) => {
         output[command] = wrapper(spec[command], command);
         return output;
@@ -33,14 +36,22 @@ function makeAPIWrapper(api, namespacer) {
     };
 }
 
+function extractClassCommands(instance) {
+    const result = {};
+    Object.getOwnPropertyNames(Object.getPrototypeOf(instance))
+        .filter(key => !key.startsWith('_') && typeof instance[key] === 'function')//filter out private and non function 
+        .forEach(key => result[key] = instance[key].bind(instance)); //bind all functions
+    return result;
+}
+
 function createWrapped(sub, user) {
     function namespacer(name) {
         return namespace(user.id, name);
     }
     const commands = Object.assign({},
-        wrapAll(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
-        wrapAll(specs.sub, makeAPIWrapper(sub, namespacer)),
-        wrapAll(specs.write, (argNumber, command) => {
+        wrapSpec(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
+        wrapSpec(specs.sub, makeAPIWrapper(sub, namespacer)),
+        wrapSpec(specs.write, (argNumber, command) => {
             const apiCall = db[command + 'Async'].bind(db);
             return (...args) => {
                 commands.publish(namespace('write', args[argNumber]), JSON.stringify({
@@ -56,4 +67,10 @@ function createWrapped(sub, user) {
     return commands;
 }
 
-module.exports = {createWrapped, getName, namespace};
+module.exports = {
+    createWrapped,
+    getName,
+    getNamespace,
+    namespace,
+    extractClassCommands,
+};

@@ -1,8 +1,10 @@
 const UserManager = require('./db/user');
+const ScriptManager = require('./db/script');
 const config = require('./config');
 const { create } = require('./db');
-const { createWrapped, getName, namespace } = require('./command/wrap');
+const { createWrapped, getName, getNamespace, extractClassCommands } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
+
 let serializeError;
 if (isHeroku())
     serializeError = error => error.message;
@@ -65,17 +67,17 @@ module.exports = (ws) => {
         }))));
 
         //create command set
-        const commands = createWrapped(sub, user);
+        const commands = {
+            redis: createWrapped(sub, user),
+            user: extractClassCommands(user),
+        };
+        commands.script = extractClassCommands(new ScriptManager(commands));
         commands.goodVibrations = (god) => {
             if (god)
                 throw new Error('tinkle hoy');
             else
                 return '1.129848';
         };
-        Object.getOwnPropertyNames(Object.getPrototypeOf(user)).forEach(key => {
-            if (typeof user[key] === 'function') 
-                commands[namespace('user', key)] = user[key].bind(user);
-        });
 
         //handle messages from user
         ws.on('message', wsExceptionGuard(ws, async data => {
@@ -87,7 +89,16 @@ module.exports = (ws) => {
                     id: message.id,
                 };
                 try {
-                    response.result = await commands[message.command](...message.args);
+                    let command;
+                    try {
+                        if (message.command.includes(':'))
+                            command = commands[getNamespace(message.command)][getName(message.command)];
+                        else
+                            command = commands[message.command];
+                    } catch (error) {
+                        throw new Error('Invalid command');
+                    }
+                    response.result = await command(...message.args);
                     response.subType = 'result';
                 } catch (error) {
                     response.subType = 'error';
