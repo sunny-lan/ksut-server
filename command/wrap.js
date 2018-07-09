@@ -1,16 +1,7 @@
+const { getName, namespace } = require('./namespace');
+
 const specs = require('./specs');
 const { db } = require('../db');
-
-function namespace(space, name) {
-    return `${space}:${name}`;
-}
-
-function getName(namespaced) {
-    return namespaced.substring(namespaced.indexOf(':') + 1);
-}
-function getNamespace(namespaced) {
-    return namespaced.substring(0, namespaced.indexOf(':'));
-}
 
 function wrapSpec(spec, wrapper) {
     return Object.keys(spec).reduce((output, command) => {
@@ -69,8 +60,5 @@ function createWrapped(sub, user) {
 
 module.exports = {
     createWrapped,
-    getName,
-    getNamespace,
-    namespace,
     extractClassCommands,
 };

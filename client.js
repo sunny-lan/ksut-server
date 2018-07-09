@@ -2,14 +2,15 @@ const UserManager = require('./db/user');
 const ScriptManager = require('./db/script');
 const config = require('./config');
 const { create } = require('./db');
-const { createWrapped, getName, getNamespace, extractClassCommands } = require('./command/wrap');
+const { createWrapped, extractClassCommands } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
+const { getName, getNamespace } = require('./command/namespace');
 
 let serializeError;
 if (isHeroku())
     serializeError = error => error.message;
 else
-    serializeError = require('serialize-error');
+    serializeError = error => { console.error(error); return error.message; };
 
 function wsExceptionGuard(ws, action) {
     return (...args) => {
@@ -95,8 +96,10 @@ module.exports = (ws) => {
                             command = commands[getNamespace(message.command)][getName(message.command)];
                         else
                             command = commands[message.command];
+                        if (command === undefined)
+                            throw new Error();
                     } catch (error) {
-                        throw new Error('Invalid command');
+                        throw new Error('Invalid command ' + JSON.stringify(message));
                     }
                     response.result = await command(...message.args);
                     response.subType = 'result';

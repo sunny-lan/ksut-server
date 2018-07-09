@@ -10,6 +10,11 @@ module.exports = {
     },
     read: {
         get: (ns, key) => [ns(key)],
+        hkeys: [
+            (ns, key) => [ns(key)],
+            (gn, keys) => keys.map(gn),
+        ],
+        hget: (ns, key, field) => [ns(key), field]
     },
     write: {
         set: 0,
