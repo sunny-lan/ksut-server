@@ -5,31 +5,34 @@ const { create } = require('./db');
 const { createWrapped, extractClassCommands } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 const { getName, getNamespace } = require('./command/namespace');
+const WebSocket = require('ws');
 
 let serializeError;
 if (isHeroku())
     serializeError = error => error.message;
 else
-    serializeError = error => { console.error(error); return error.message; };
+    serializeError = error => { console.error('TO CLIENT:', error); return error.message; };
 
 module.exports = (ws) => {
+    const _send = ws.send.bind(ws);
+    ws.send = (...args) => {
+        if (ws.readyState === WebSocket.OPEN)
+            return _send(...args);
+    };
     function wsExceptionGuard(action) {
         return (...args) => {
             //try to run the action as a promise
             (async () => action(...args))().catch(error => {
-                try {
-                    ws.send(JSON.stringify({
-                        //caught errors are sent to the client
-                        type: 'error',
-                        error: serializeError(error)
-                    }));
-                } catch (error) {
-                    ws.terminate();
-                }
+                ws.send(JSON.stringify({
+                    //caught errors are sent to the client
+                    type: 'error',
+                    error: serializeError(error)
+                }));
             });
             //TODO:handle return values
         };
     }
+
     //init message, client should check version match
     ws.send(JSON.stringify({
         type: 'init',
