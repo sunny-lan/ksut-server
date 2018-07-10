@@ -12,21 +12,24 @@ if (isHeroku())
 else
     serializeError = error => { console.error(error); return error.message; };
 
-function wsExceptionGuard(ws, action) {
-    return (...args) => {
-        //try to run the action as a promise
-        (async () => action(...args))().catch(
-            error => ws.send(JSON.stringify({
-                //caught errors are sent to the client
-                type: 'error',
-                error: serializeError(error)
-            }))
-        );
-        //TODO:handle return values
-    };
-}
-
 module.exports = (ws) => {
+    function wsExceptionGuard(action) {
+        return (...args) => {
+            //try to run the action as a promise
+            (async () => action(...args))().catch(error => {
+                try {
+                    ws.send(JSON.stringify({
+                        //caught errors are sent to the client
+                        type: 'error',
+                        error: serializeError(error)
+                    }));
+                } catch (error) {
+                    ws.terminate();
+                }
+            });
+            //TODO:handle return values
+        };
+    }
     //init message, client should check version match
     ws.send(JSON.stringify({
         type: 'init',
@@ -34,7 +37,7 @@ module.exports = (ws) => {
     }));
 
     //wait for client to login
-    ws.once('message', wsExceptionGuard(ws, async data => {
+    ws.once('message', wsExceptionGuard(async data => {
         //check login
         const message = JSON.parse(data);
         if (message.type !== 'login')
@@ -53,15 +56,15 @@ module.exports = (ws) => {
         //set up heartbeat
         ws.isAlive = true;
         ws.on('pong', () => ws.isAlive = true);
-        const pingTimer = setInterval(() => {
+        const pingTimer = setInterval(wsExceptionGuard(() => {
             if (!ws.isAlive) return ws.terminate();
             ws.isAlive = false;
             try { ws.ping(); } catch (error) { ws.terminate(); }
-        }, config.heartbeat);
+        }), config.heartbeat);
 
         //create redis client for this subscriber
         const sub = create();
-        sub.on('message', wsExceptionGuard(ws, (channel, message) => ws.send(JSON.stringify({
+        sub.on('message', wsExceptionGuard((channel, message) => ws.send(JSON.stringify({
             type: 'message',
             channel: getName(channel),
             message: JSON.parse(message),
@@ -81,7 +84,7 @@ module.exports = (ws) => {
         };
 
         //handle messages from user
-        ws.on('message', wsExceptionGuard(ws, async data => {
+        ws.on('message', wsExceptionGuard(async data => {
             const message = JSON.parse(data);
             if (message.type === 'command') {
                 //run command and send back response
