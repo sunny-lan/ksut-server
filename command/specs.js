@@ -7,6 +7,10 @@ module.exports = {
             (ns, channel, ...channels) => [ns(channel), ...channels.map(ns)], //arg mapper
             (gn, channel) => gn(channel), //result mapper
         ],
+        unsubscribe:[
+            (ns, channel, ...channels) => [ns(channel), ...channels.map(ns)],
+            (gn, channel) => gn(channel),
+        ]
     },
     read: {
         get: (ns, key) => [ns(key)],

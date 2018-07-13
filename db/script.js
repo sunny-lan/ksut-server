@@ -1,4 +1,4 @@
-const { transform } = require('@babel/standalone');
+const {transform} = require('@babel/standalone');
 const uuid = require('uuid/v4');
 
 const tables = {
@@ -19,7 +19,8 @@ class ScriptManager {
             newCode = await this.commands.redis.hget(tables.code, scriptID);
         else
             tasks.push(this.commands.redis.hset(tables.code, scriptID, newCode));
-        newCode=`(React, components)=>{return ${newCode};}`;
+        newCode = newCode.replace('export default', 'return');
+        newCode = `(React, components, id, connect)=>{${newCode};}`;
 
         //translate jsx
         const compiled = transform(newCode, {
@@ -28,7 +29,7 @@ class ScriptManager {
 
         //save translated
         tasks.push(this.commands.redis.hset(tables.compiled, scriptID, compiled));
-        
+
         await Promise.all(tasks);
         return scriptID;
     }
