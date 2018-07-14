@@ -20,7 +20,7 @@ class ScriptManager {
         else
             tasks.push(this.commands.redis.hset(tables.code, scriptID, newCode));
         newCode = newCode.replace('export default', 'return');
-        newCode = `(React, components, id, connect)=>{${newCode};}`;
+        newCode = `(dependencies, id)=>{${newCode};}`;
 
         //translate jsx
         const compiled = transform(newCode, {
