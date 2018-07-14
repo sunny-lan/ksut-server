@@ -31,7 +31,7 @@ class ScriptManager {
         tasks.push(this.commands.redis.hset(tables.compiled, scriptID, compiled));
 
         await Promise.all(tasks);
-        return scriptID;
+        return scriptID;//TODO this shouldn't need to be returned
     }
 
     async del(scriptID) {
