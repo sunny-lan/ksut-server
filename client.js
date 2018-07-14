@@ -6,12 +6,7 @@ const { createWrapped, extractClassCommands } = require('./command/wrap');
 const { isHeroku } = require('./config/dev');
 const { getName, getNamespace } = require('./command/namespace');
 const WebSocket = require('ws');
-
-let serializeError;
-if (isHeroku())
-    serializeError = error => error.message;
-else
-    serializeError = error => { console.error('TO CLIENT:', error); return error.message; };
+const serializeError=require('serialize-error');
 
 module.exports = (ws) => {
     const _send = ws.send.bind(ws);
