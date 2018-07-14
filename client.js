@@ -65,7 +65,7 @@ module.exports = (ws) => {
         sub.on('message', wsExceptionGuard((channel, message) => ws.send(JSON.stringify({
             type: 'message',
             channel: getName(channel),
-            message: JSON.parse(message),
+            message: message,
         }))));
 
         //create command set
