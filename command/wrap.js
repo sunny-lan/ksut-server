@@ -1,7 +1,7 @@
-const { getName, namespace } = require('./namespace');
+const {getName, namespace} = require('./namespace');
 
 const specs = require('./specs');
-const { db } = require('../db');
+const {db} = require('../db');
 
 function wrapSpec(spec, wrapper) {
     return Object.keys(spec).reduce((output, command) => {
@@ -39,16 +39,15 @@ function createWrapped(sub, user) {
     function namespacer(name) {
         return namespace(user.id, name);
     }
+
     const commands = Object.assign({},
         wrapSpec(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
         wrapSpec(specs.sub, makeAPIWrapper(sub, namespacer)),
         wrapSpec(specs.write, (argNumber, command) => {
             const apiCall = db[command + 'Async'].bind(db);
             return (...args) => {
-                commands.publish(namespace('write', args[argNumber]), JSON.stringify({
-                    command,
-                    args
-                })).catch(error => console.warn('could not publish write', error));
+                commands.publish(namespace('write', args[argNumber]), {command, args})
+                    .catch(error => console.warn('could not publish write', error));
                 args[argNumber] = namespacer(args[argNumber]);
                 return apiCall(...args);
             };
