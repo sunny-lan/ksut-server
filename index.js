@@ -5,9 +5,7 @@ const handleClient = require('./websocketClient');
 const app = express();
 expressWs(app);
 
-app.get('/', function (req, res) {
-    res.send('hello world');
-});
+app.use(express.static('build'));
 
 app.ws('/', function (ws) {
     handleClient(ws);
