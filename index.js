@@ -1,7 +1,7 @@
 const express = require('express');
 const expressWs = require('express-ws');
 const { defaultPort } = require('./config');
-const handleClient = require('./client');
+const handleClient = require('./websocketClient');
 const app = express();
 expressWs(app);
 
