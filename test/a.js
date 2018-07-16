@@ -6,7 +6,7 @@ const WebSocket = require('ws');
     // await db.flushdbAsync();
     // await UserManager.add('sunny', 'aa');
 
-    const ws = new WebSocket('https://cryptic-chamber-92728.herokuapp.com/');
+    const ws = new WebSocket('ws://localhost:8080/');
     function s(a) {
         ws.send(JSON.stringify(a));
     }
@@ -44,7 +44,7 @@ const WebSocket = require('ws');
         });
         s({
             type:'command',
-            command:'goodVibrations',
+            command:'good:vibrations',
             args:[],
             id:'hello'
         });

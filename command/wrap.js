@@ -29,9 +29,15 @@ function makeAPIWrapper(api, namespacer) {
 
 function extractClassCommands(instance) {
     const result = {};
-    Object.getOwnPropertyNames(Object.getPrototypeOf(instance))
-        .filter(key => !key.startsWith('_') && typeof instance[key] === 'function')//filter out private and non function 
-        .forEach(key => result[key] = instance[key].bind(instance)); //bind all functions
+    let input=instance;
+    if (typeof instance === 'object')
+        input = Object.getPrototypeOf(input);
+    Object.getOwnPropertyNames(input).filter(key => !key.startsWith('_') && typeof instance[key] === 'function' && key !== 'constructor')//filter out private and non function
+        .forEach(key => {
+            result[key] = instance[key];
+            if (typeof  instance === 'object')
+                result[key] = result[key].bind(instance)
+        }); //bind all functions
     return result;
 }
 

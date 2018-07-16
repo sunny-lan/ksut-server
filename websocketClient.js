@@ -15,7 +15,7 @@ module.exports = (ws) => {
         return (...args) => {
             //try to run the action as a promise
             (async () => action(...args))().catch(error => {
-                console.log('local err',error);
+                console.log('local err', error);
                 ws.send(JSON.stringify({
                     //caught errors are sent to the client
                     type: 'error',
@@ -63,36 +63,40 @@ module.exports = (ws) => {
         }), config.heartbeat);
 
         const client = createClient(user, wsExceptionGuard(
-            (channel, message) => ws.send(JSON.stringify({
-                type: 'message',
-                channel, message,
-            }))
+            (channel, message) => {
+                ws.send(JSON.stringify({
+                    type: 'message',
+                    channel, message,
+                }));
+            }
         ));
         const commands = client.commands;
 
         //handle messages from user
         ws.on('message', wsExceptionGuard(async data => {
             const message = JSON.parse(data);
-            if (message.type === 'command') try {
+            if (message.type === 'command') {
                 //run command and send back response
                 let response = {
                     type: 'commandResponse',
                     id: message.id,
                 };
-                let command;
                 try {
-                    command = commands[getNamespace(message.command)][getName(message.command)];
-                    if (command === undefined)
-                        throw new Error();
+                    let command;
+                    try {
+                        command = commands[getNamespace(message.command)][getName(message.command)];
+                        if (command === undefined)
+                            throw new Error();
+                    } catch (error) {
+                        throw new Error('Invalid command ' + JSON.stringify(message));
+                    }
+                    response.result = await command(...message.args);
+                    response.subType = 'result';
                 } catch (error) {
-                    throw new Error('Invalid command ' + JSON.stringify(message));
+                    response.subType = 'error';
+                    response.error = serializeError(error);
                 }
-                response.result = await command(...message.args);
-                response.subType = 'result';
                 ws.send(JSON.stringify(response));
-            } catch (error) {
-                response.subType = 'error';
-                response.error = serializeError(error);
             } else
                 throw new Error('Invalid message type');
         }));

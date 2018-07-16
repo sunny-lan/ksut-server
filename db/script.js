@@ -1,10 +1,20 @@
 const {transform} = require('@babel/standalone');
 const uuid = require('uuid/v4');
+const exitHook = require('exit-hook');
+const {db} = require('./db');
 
 const tables = {
     code: 'script-code',
-    compiled: 'script-compiled'
+
+    client: 'script-client',
+    server: 'script-server',
+
+    instances: 'instance-script',
+    running: 'instance-running'
 };
+
+const serverRegex = /\/\/ksut: server code begin([\s\S]*)\/\/ksut: server code end/;
+const clientRegex = /\/\/ksut: client code begin([\s\S]*)\/\/ksut: client code end/;
 
 class ScriptManager {
     constructor(commands) {
@@ -19,26 +29,47 @@ class ScriptManager {
             newCode = await this.commands.redis.hget(tables.code, scriptID);
         else
             tasks.push(this.commands.redis.hset(tables.code, scriptID, newCode));
-        newCode = newCode.replace('export default', 'return');
-        newCode = `(dependencies, id)=>{${newCode};}`;
+
+        const serverCode = newCode.match(serverRegex),
+            clientCode = newCode.match(clientRegex);
+
+        if(!serverCode && !clientCode)
+            throw new Error('No code sent. Code must be flagged with "//ksut: ..."');
+
+        if (clientCode)
+            tasks.push(ScriptManager._compileClient(scriptID, clientCode[1]));
+
+        if (serverCode)
+            tasks.push(ScriptManager._compileServer(scriptID, serverCode[1]));
+
+        await Promise.all(tasks);
+    }
+
+    async instantiate(scriptID) {
+        const instanceID = uuid();
+        await this.commands.redis.hsetAsync(tables.instances, instanceID, scriptID);
+        //TODO run server side code
+        return instanceID;
+    }
+
+    static async fetch(scriptID) {
+        return db.hgetAsync(tables.client, scriptID);
+    }
+
+    static async _compileClient(scriptID, code) {
+        code = code.replace('export default', 'return');
+        code = `(dependencies)=>{${code};}`;
 
         //translate jsx
-        const compiled = transform(newCode, {
+        const compiled = transform(code, {
             plugins: ['transform-react-jsx']
         }).code;
 
-        //save translated
-        tasks.push(this.commands.redis.hset(tables.compiled, scriptID, compiled));
-
-        await Promise.all(tasks);
-        return scriptID;//TODO this shouldn't need to be returned
+        await db.hsetAsync(tables.client, scriptID, compiled);
     }
 
-    async del(scriptID) {
-        await Promise.all([
-            this.commands.hdel(tables.code, scriptID),
-            this.commands.hdel(tables.compiled, scriptID),
-        ]);
+    static async _compileServer(scriptID, code) {
+        await db.hsetAsync(tables.server, scriptID, code);
     }
 }
 module.exports = ScriptManager;

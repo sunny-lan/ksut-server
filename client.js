@@ -12,8 +12,9 @@ module.exports = (user, onMessage) => {
     const commands = {
         redis: createWrapped(sub, user),
         user: extractClassCommands(user),
+        script:{}
     };
-    commands.script = extractClassCommands(new ScriptManager(commands));
+    Object.assign(commands.script,extractClassCommands(new ScriptManager(commands)), extractClassCommands(ScriptManager));
     commands.good = {
         vibrations(god) {
             if (god)

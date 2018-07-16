@@ -31,6 +31,12 @@ const UserManager = {
         }
         throw new Error('Invalid login');
     },
+
+    async get(id){
+        if (!await db.hexistsAsync(tables.username, id))
+            throw new Error('User does not exist');
+        return new User(id);
+    },
 };
 
 //this runs the first time server is started
@@ -57,16 +63,6 @@ class User {
 
     async getUsername() {
         return db.hgetAsync(tables.username, this.id);
-    }
-
-    async del() {
-        await Promise.all([
-            db.hdelAsync(tables.password, this.id), //password
-            this.getUsername().then(name => Promise.all([
-                db.hdelAsync(tables.loginID, name), //login table
-                db.hdelAsync(tables.username, this.id) //name table
-            ])),
-        ]);
     }
 }
 
