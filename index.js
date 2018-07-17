@@ -2,17 +2,10 @@ const express = require('express');
 const expressWs = require('express-ws');
 const { defaultPort } = require('./config');
 const handleClient = require('./websocketClient');
-const csp=require('helmet-csp');
 const app = express();
 expressWs(app);
 
-app.use(csp({
-    directives:{
-        workerSrc: ["'self' data: blob:"],
-    }
-}));
 app.use(express.static('build'));
-
 
 app.ws('/', function (ws) {
     handleClient(ws);
