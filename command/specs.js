@@ -7,10 +7,10 @@ module.exports = {
             (ns, channel, ...channels) => [ns(channel), ...channels.map(ns)], //arg mapper
             (gn, channel) => gn(channel), //result mapper
         ],
-        unsubscribe:[
+        unsubscribe: [
             (ns, channel, ...channels) => [ns(channel), ...channels.map(ns)],
             (gn, channel) => gn(channel),
-        ]
+        ],
     },
     read: {
         get: (ns, key) => [ns(key)],
@@ -18,10 +18,15 @@ module.exports = {
             (ns, key) => [ns(key)],
             (gn, keys) => keys.map(gn),
         ],
-        hget: (ns, key, field) => [ns(key), field]
+        hget: (ns, key, field) => [ns(key), field],
+        hgetall:(ns,key)=>[ns(key)],
+        lrange: (ns, key, start, stop) => [ns(key), start, stop],
     },
     write: {
         set: 0,
-        hset: 0
+        hset: 0,
+        hincrby: 0,
+        lpush: 0,
+        ltrim: 0,
     },
 };

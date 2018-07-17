@@ -24,5 +24,5 @@ module.exports = (user, onMessage) => {
         }
     };
 
-    return {commands, quit: sub.quit};
+    return {commands, quit: sub.quit.bind(sub)};
 };

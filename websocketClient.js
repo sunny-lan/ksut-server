@@ -5,17 +5,22 @@ const WebSocket = require('ws');
 const serializeError = require('serialize-error');
 const createClient = require('./client');
 
+const tables = {
+    online: 'device-online',
+};
+
 module.exports = (ws) => {
     const _send = ws.send.bind(ws);
     ws.send = (...args) => {
         if (ws.readyState === WebSocket.OPEN)
             return _send(...args);
+        else
+            ws.terminate();
     };
     function wsExceptionGuard(action) {
         return (...args) => {
             //try to run the action as a promise
             (async () => action(...args))().catch(error => {
-                console.log('local err', error);
                 ws.send(JSON.stringify({
                     //caught errors are sent to the client
                     type: 'error',
@@ -46,22 +51,7 @@ module.exports = (ws) => {
             throw error;
         }
 
-        //tell user they were successful
-        ws.send(JSON.stringify({type: 'loginSuccess'}));
-
-        //set up heartbeat
-        ws.isAlive = true;
-        ws.on('pong', () => ws.isAlive = true);
-        const pingTimer = setInterval(wsExceptionGuard(() => {
-            if (!ws.isAlive) return ws.terminate();
-            ws.isAlive = false;
-            try {
-                ws.ping();
-            } catch (error) {
-                ws.terminate();
-            }
-        }), config.heartbeat);
-
+        //set up commands
         const client = createClient(user, wsExceptionGuard(
             (channel, message) => {
                 ws.send(JSON.stringify({
@@ -71,6 +61,27 @@ module.exports = (ws) => {
             }
         ));
         const commands = client.commands;
+
+        //mark device online
+        const {deviceID} = message;
+        if (deviceID)
+            commands.redis.hincrby(tables.online, deviceID, 1);
+
+        //set up heartbeat
+        ws.isAlive = true;
+        ws.on('pong', () => ws.isAlive = true);
+        const pingTimer = setInterval(() => {
+            try {
+            if (!ws.isAlive) return ws.terminate();
+            ws.isAlive = false;
+                ws.ping();
+            } catch (error) {
+                ws.terminate();
+            }
+        }, config.heartbeat);
+
+        //tell user they were successful
+        ws.send(JSON.stringify({type: 'loginSuccess'}));
 
         //handle messages from user
         ws.on('message', wsExceptionGuard(async data => {
@@ -88,7 +99,7 @@ module.exports = (ws) => {
                         if (command === undefined)
                             throw new Error();
                     } catch (error) {
-                        throw new Error('Invalid command ' + JSON.stringify(message));
+                        throw new Error('Invalid command:', message.command);
                     }
                     response.result = await command(...message.args);
                     response.subType = 'result';
@@ -102,8 +113,13 @@ module.exports = (ws) => {
         }));
 
         //clean up on disconnect
-        ws.on('disconnect', () => {
+        ws.on('close', () => {
+            //stop pinging
             clearInterval(pingTimer);
+            //mark device offline
+            if (deviceID)
+                commands.redis.hincrby(tables.online, deviceID, -1);
+            //clean up redis
             client.quit();
         });
     }));
