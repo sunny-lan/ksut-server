@@ -19,6 +19,7 @@
     "exit-hook": "^2.0.0",
     "express": "^4.16.3",
     "express-ws": "^4.0.0",
+    "helmet-csp": "^2.7.0",
     "password-hash": "^1.2.2",
     "redis": "^2.8.0",
     "serialize-error": "^2.1.0",
