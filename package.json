@@ -27,6 +27,7 @@
     "ws": "^5.2.1"
   },
   "devDependencies": {
+    "deserialize-error": "^0.0.3",
     "eslint": "^5.0.1",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.13.0",

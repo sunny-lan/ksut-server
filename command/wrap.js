@@ -29,7 +29,7 @@ function makeAPIWrapper(api, namespacer) {
 
 function extractClassCommands(instance) {
     const result = {};
-    let input=instance;
+    let input = instance;
     if (typeof instance === 'object')
         input = Object.getPrototypeOf(input);
     Object.getOwnPropertyNames(input).filter(key => !key.startsWith('_') && typeof instance[key] === 'function' && key !== 'constructor')//filter out private and non function
@@ -41,6 +41,7 @@ function extractClassCommands(instance) {
     return result;
 }
 
+//TODO move this to client.js
 function createWrapped(sub, user) {
     function namespacer(name) {
         return namespace(user.id, name);
@@ -52,10 +53,9 @@ function createWrapped(sub, user) {
         wrapSpec(specs.write, (argNumber, command) => {
             const apiCall = db[command + 'Async'].bind(db);
             return (...args) => {
-                commands.publish(namespace('write', args[argNumber]), {command, args})
-                    .catch(error => console.warn('could not publish write', error));
+                let publish = commands.publish(namespace('write', args[argNumber]), {command, args});
                 args[argNumber] = namespacer(args[argNumber]);
-                return apiCall(...args);
+                return Promise.all([apiCall(...args), publish]);
             };
         }),
     );

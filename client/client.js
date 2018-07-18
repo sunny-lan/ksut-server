@@ -1,7 +1,7 @@
-const {createWrapped, extractClassCommands} = require('./command/wrap');
-const ScriptManager = require('./db/script');
-const {getName} = require('./command/namespace');
-const {create} = require('./db');
+const {createWrapped, extractClassCommands} = require('../command/wrap');
+const ScriptManager = require('../db/script');
+const {getName} = require('../command/namespace');
+const {create} = require('../db/index');
 
 module.exports = (user, onMessage) => {
     //create redis client for this subscriber
