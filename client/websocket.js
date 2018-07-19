@@ -65,11 +65,11 @@ module.exports = (ws) => {
         //set up heartbeat
         let countdown = 2;
         ws.on('pong', () => countdown = 2);
-        const pingTimer = setInterval(() => {
+        const pingTimer = setInterval(wsExceptionGuard(() => {
             ws.ping();
             if (--countdown <= 0)
                 ws.terminate();
-        }, config.heartbeat);
+        }), config.heartbeat);
 
         //handle messages from user
         const messageHandler = createMessageHandler(client, ws.send);
