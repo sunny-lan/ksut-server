@@ -47,7 +47,7 @@ class ScriptManager {
 
     async instantiate(scriptID) {
         const instanceID = uuid();
-        await this.commands.redis.hsetAsync(tables.instances, instanceID, scriptID);
+        await this.commands.redis.hset(tables.instances, instanceID, scriptID);
         //TODO run server side code
         return instanceID;
     }

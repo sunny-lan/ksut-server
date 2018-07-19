@@ -60,7 +60,7 @@ module.exports = (ws) => {
         //mark device online
         const {deviceID} = message;
         if (deviceID)
-            client.commands.redis.hincrby(tables.online, deviceID, 1);
+            client.commands.redis.hset(tables.online, deviceID, 1);
 
         //set up heartbeat
         let countdown = 2;
@@ -84,7 +84,7 @@ module.exports = (ws) => {
             clearInterval(pingTimer);
             //mark device offline
             if (deviceID)
-                client.commands.redis.hincrby(tables.online, deviceID, -1);
+                client.commands.redis.hset(tables.online, deviceID, 0);
             //clean up redis
             client.quit();
         });
