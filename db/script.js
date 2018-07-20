@@ -110,10 +110,16 @@ class ScriptManager {
         return instanceID;
     }
 
+    async destroyInstance(instanceID){
+        await this.commands.redis.hdel(tables.instances, instanceID);
+        //TODO stop server side code
+    }
+
     static async fetch(scriptID) {
         return db.hgetAsync(tables.client, scriptID);
     }
 
+    //TODO change to ...terms instead
     static async search(terms){
         return db.sinterAsync(removeStopwords(terms).map(stemmer).map(metaphone).map(tables.index));
     }

@@ -26,6 +26,7 @@ module.exports = {
         set: 0,
         hset: 0,
         hincrby: 0,
+        hdel:0,
         lpush: 0,
         ltrim: 0,
     },
