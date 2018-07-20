@@ -8,13 +8,13 @@ expressWs(app);
 
 app.use(express.static('build'));
 
+app.ws('/', function (ws) {
+    handleClient(ws);
+});
 // Always return the main index.html, so react-router render the route in the client
 app.get('*', (req, res) => {
     res.sendFile('build/index.html');
 });
 
-app.ws('/', function (ws) {
-    handleClient(ws);
-});
 
 app.listen(process.env.PORT || defaultPort);
