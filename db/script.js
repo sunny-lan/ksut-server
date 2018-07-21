@@ -125,5 +125,9 @@ class ScriptManager {
     static async search(terms) {
         return db.sinterAsync(removeStopwords(terms).map(stemmer).map(metaphone).map(tables.index));
     }
+
+    static async fetchInfo(scriptID) {
+        return JSON.parse(await db.hgetAsync(tables.info, scriptID));
+    }
 }
 module.exports = ScriptManager;
