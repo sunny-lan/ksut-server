@@ -5,7 +5,7 @@ const {db} = require('./db');
 const stemmer = require('stemmer');
 const metaphone = require('metaphone');
 const {namespace} = require('../command/namespace');
-const {removeStopwords}=require('stopword');
+const {removeStopwords} = require('stopword');
 
 const tables = {
     code: 'script-code',
@@ -45,6 +45,8 @@ class ScriptManager {
         if (!serverCode && !clientCode)
             throw new Error('No code sent. Code must be flagged with "//ksut: ..."');
 
+        await ScriptManager._removeFromIndex(scriptID);
+
         if (scriptInfo)
             tasks.push(ScriptManager._saveInfo(scriptID, scriptInfo[1]));
 
@@ -59,22 +61,22 @@ class ScriptManager {
 
     static _getWords(info) {
         let words = [];
-        if(!info)return words;
-        if (info.name) words=words.concat(info.name.split(' '));
-        if (info.description) words=words.concat(info.description.split(' '));
+        if (!info)return words;
+        if (info.name) words = words.concat(info.name.split(' '));
+        if (info.description) words = words.concat(info.description.split(' '));
         return removeStopwords(words).map(stemmer).map(metaphone);
     }
 
-    static async _removeFromIndex(scriptID){
+    static async _removeFromIndex(scriptID) {
+        const info = await db.hgetAsync(tables.info, scriptID);
+        if (!info)return;
         //remove old words from index
-        const oldInfo = JSON.parse(await db.hgetAsync(tables.info, scriptID));
+        const oldInfo = JSON.parse(info);
         return Promise.all(ScriptManager._getWords(oldInfo)
             .map(word => db.sremAsync(tables.index(word), scriptID)));
     }
 
     static async _saveInfo(scriptID, info) {
-        await ScriptManager._removeFromIndex(scriptID);
-
         //add new words to index
         let tasks = [];
         const newInfo = JSON.parse(info);//check for json error
@@ -110,7 +112,7 @@ class ScriptManager {
         return instanceID;
     }
 
-    async destroyInstance(instanceID){
+    async destroyInstance(instanceID) {
         await this.commands.redis.hdel(tables.instances, instanceID);
         //TODO stop server side code
     }
@@ -120,7 +122,7 @@ class ScriptManager {
     }
 
     //TODO change to ...terms instead
-    static async search(terms){
+    static async search(terms) {
         return db.sinterAsync(removeStopwords(terms).map(stemmer).map(metaphone).map(tables.index));
     }
 }
