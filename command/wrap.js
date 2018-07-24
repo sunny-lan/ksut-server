@@ -1,69 +1,54 @@
-const {getName, namespace} = require('./namespace');
+const {getName, namespace, getNamespace} = require('./namespace');
 
-const specs = require('./specs');
-const {db} = require('../db');
-
-function wrapSpec(spec, wrapper) {
-    return Object.keys(spec).reduce((output, command) => {
-        output[command] = wrapper(spec[command], command);
-        return output;
-    }, {});
-}
-
-function makeAPIWrapper(api, namespacer) {
-    return function apiWrapper(mapper, command) {
-        let argMapper, resultMapper;
-        if (typeof mapper === 'function')
-            argMapper = mapper;
+function makeEndpoint(instance, async) {
+    const staticFuncs = Object.getPrototypeOf(instance).constructor;
+    return async message => {
+        let command = message.command;
+        if (command.startsWith('_'))
+            throw new Error("Private commands cannot be called");
+        if (async) command += 'Async';
+        if (instance[command])
+            message.result = await instance[command](...message.args);
+        else if (staticFuncs[command])
+            message.result = await staticFuncs[command](...message.args);
         else
-            [argMapper, resultMapper] = mapper;
-
-        return async (...args) => {
-            let result = await api[command + 'Async'](argMapper(namespacer, ...args));
-            if (resultMapper)
-                result = resultMapper(getName, result);
-            return result;
-        };
+            throw new Error("Command doesn't exist");
+        return message;
     };
 }
 
-function extractClassCommands(instance) {
-    const result = {};
-    let input = instance;
-    if (typeof instance === 'object')
-        input = Object.getPrototypeOf(input);
-    Object.getOwnPropertyNames(input).filter(key => !key.startsWith('_') && typeof instance[key] === 'function' && key !== 'constructor')//filter out private and non function
-        .forEach(key => {
-            result[key] = instance[key];
-            if (typeof  instance === 'object')
-                result[key] = result[key].bind(instance)
-        }); //bind all functions
-    return result;
+function makeNamespaced(namespaces) {
+    return message => {
+        const namespace = getNamespace(message.command);
+        if (!namespaces[namespace])
+            throw new Error('Invalid namespace');
+        message.command = getName(message.command);
+        return namespaces[namespace](message);
+    };
 }
 
-//TODO move this to client.js
-function createWrapped(sub, user) {
-    function namespacer(name) {
-        return namespace(user.id, name);
-    }
-
-    const commands = Object.assign({},
-        wrapSpec(Object.assign({}, specs.read, specs.pub), makeAPIWrapper(db, namespacer)),
-        wrapSpec(specs.sub, makeAPIWrapper(sub, namespacer)),
-        wrapSpec(specs.write, (argNumber, command) => {
-            const apiCall = db[command + 'Async'].bind(db);
-            return (...args) => {
-                let publish = commands.publish(namespace('write', args[argNumber]), {command, args});
-                args[argNumber] = namespacer(args[argNumber]);
-                return Promise.all([apiCall(...args), publish]);
-            };
-        }),
+function makeSpeced(spec, specParser) {
+    const parsed = {};
+    const parseType = typeof specParser === 'object';
+    Object.keys(spec).forEach(
+        section => Object.keys(spec[section]).forEach(
+            command => {
+                let parseFunc = specParser;
+                if (parseType)
+                    parseFunc = parseFunc[section];
+                parsed[command] = parseFunc(spec[section][command])
+            }
+        )
     );
-
-    return commands;
+    return message => {
+        if (!parsed[message.command])
+            throw new Error('Invalid command' + JSON.stringify(message));
+        return parsed[message.command](message);
+    };
 }
 
 module.exports = {
-    createWrapped,
-    extractClassCommands,
+    makeEndpoint,
+    makeSpeced,
+    makeNamespaced,
 };

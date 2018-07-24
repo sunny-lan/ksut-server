@@ -3,9 +3,16 @@ const expressWs = require('express-ws');
 const {defaultPort} = require('./config');
 const handleClient = require('./client/websocket');
 const bodyParser = require('body-parser');
-const UserManager = require('./db/user');
+const UserManager = require('./command/user');
 const serializeError = require('serialize-error');
+const ScriptManager = require('./command/script');
 
+ScriptManager._init().catch(error => console.error('Failed to initialize scripts', error));
+
+process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+    // application specific logging, throwing an error, or other logic here
+});
 const app = express();
 
 expressWs(app);
@@ -15,7 +22,7 @@ app.use(bodyParser.json());
 app.post('/createAccount', (req, res) => {
     UserManager.add(req.body.username, req.body.password)
         .then(() => res.sendStatus(200))
-        .catch(e=>res.send(serializeError(e)))
+        .catch(e => res.send(serializeError(e)))
 });
 
 app.use(express.static('build'));

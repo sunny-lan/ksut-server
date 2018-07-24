@@ -1,8 +1,8 @@
-const UserManager = require('../db/user');
+const UserManager = require('../command/user');
 const config = require('../config/index');
 const WebSocket = require('ws');
 const serializeError = require('serialize-error');
-const createClient = require('./client');
+const {createClient} = require('./client');
 const createMessageHandler = require('./message');
 
 const tables = {

@@ -1,7 +1,7 @@
 const passwordHash = require('password-hash');
 const uuid = require('uuid/v4');
-const { db } = require('./db');
-const config = require('../config');
+const { db } = require('../db/db');
+const config = require('../config/index');
 
 const tables = {
     password: 'user-password',
