@@ -46,7 +46,7 @@ class ScriptManager {
     }
 
     async instantiate(scriptID) {
-        const instanceID = uuid();
+        const instanceID = 'derpalerp';//TODO uuid();
         await Promise.all([
             this._c.s('redis:hset', tables.instances, instanceID, scriptID),
             this._server.instantiate(instanceID, scriptID),
@@ -55,6 +55,7 @@ class ScriptManager {
     }
 
     async destroyInstance(instanceID) {
+        await ServerScriptManager.kill(instanceID);
         await Promise.all([
             db.sremAsync(tables.unstarted, instanceID),
             this._c.s('redis:hdel', tables.instances, instanceID),

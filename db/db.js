@@ -1,19 +1,28 @@
 const bluebird = require('bluebird');
 const redis = require('redis');
-const { isHeroku } = require('../config/dev');
+const {isHeroku} = require('../config/dev');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
-const exitHook=require('exit-hook');
+const exitHook = require('exit-hook');
 
-const clients=[];
+const clients = [];
 
 function create() {
     let client;
     if (isHeroku())
-        client=redis.createClient(process.env.REDIS_URL);
+        client = redis.createClient(process.env.REDIS_URL);
     else
-        client=redis.createClient(require('./redis-config'));
+        client = redis.createClient(require('./redis-config'));
     clients.push(client);
+    const _quit = client.quit.bind(client);
+    client.quit = () => {
+        clients.splice(clients.indexOf(client), 1);
+        _quit();
+        console.log('quit - count:', clients.length);
+        console.trace();
+    };
+    console.log('create - count:', clients.length);
+    console.trace();
     return client;
 }
 
@@ -24,4 +33,4 @@ module.exports = {
     db,
 };
 
-exitHook(()=>clients.forEach(client=>client.quit()));
+exitHook(() => clients.forEach(client => client.quit()));

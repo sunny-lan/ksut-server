@@ -4,7 +4,7 @@ const {VM} = require('vm2');
 const clientCreator = require('../../client/client');
 const EventEmitter = require('events');
 const UserManager = require('../user');
-const exitHook = require('exit-hook');
+const exitHook = require('async-exit-hook');
 
 const running = {};
 
@@ -32,28 +32,33 @@ class ServerScriptManager {
                 },
             }
         }).run(await db.hgetAsync(tables.server, info.scriptID));
-        running[instanceID] = true;
+        running[instanceID] = client;
         await db.sremAsync(tables.unstarted, info.scriptID);
     }
 
     static async init() {
-        exitHook(() => {
-            Promise.all(
-                Object.keys(running)
-                    .filter(instanceID => running[instanceID])
-                    .map(instanceID => db.saddAsync(tables.unstarted, instanceID))
-            ).then(() => console.log('successfully exited'))
+        exitHook(done => {
+            Promise.all(Object.keys(running).forEach(ServerScriptManager.kill))
+                .then(() => console.log('successfully exited'))
                 .catch(console.error)
+                .then(done)
         });
-        const unstarted = await db.smembers(tables.unstarted) || [];
+        const unstarted = (await db.smembersAsync(tables.unstarted)) || [];
         await Promise.all(unstarted.map(ServerScriptManager.run));
     }
 
+    static async kill(instanceID){
+        running[instanceID].quit();
+        delete running[instanceID];
+        await db.saddAsync(tables.unstarted, instanceID);
+    }
+
     async instantiate(instanceID, scriptID) {
-        if (!await db.hexistsAsync(tables.server, scriptID))
+        if (!await db.
+            hexistsAsync(tables.server, scriptID))
             return;
         const startInfo = {
-            owner: this._c.user,
+            owner: this._c.user.id,
             scriptID: scriptID,
         };
         await Promise.all([
