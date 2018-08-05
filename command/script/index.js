@@ -4,6 +4,7 @@ const ClientScriptManager = require('./client');
 const ServerScriptManager = require('./server');
 const ScriptInfoManager = require('./info');
 const tables = require('./tables');
+const {namespace} = require('../namespace');
 
 const infoRegex = /\/\/ksut: info begin([\s\S]*)\/\/ksut: info end/;
 const serverRegex = /\/\/ksut: server code begin([\s\S]*)\/\/ksut: server code end/;
@@ -46,7 +47,7 @@ class ScriptManager {
     }
 
     async instantiate(scriptID) {
-        const instanceID = 'derpalerp';//TODO uuid();
+        const instanceID = uuid();
         await Promise.all([
             this._c.s('redis:hset', tables.instances, instanceID, scriptID),
             this._server.instantiate(instanceID, scriptID),
@@ -55,11 +56,10 @@ class ScriptManager {
     }
 
     async destroyInstance(instanceID) {
-        await ServerScriptManager.kill(instanceID);
         await Promise.all([
+            this._c.s('redis:publish',namespace('kill', instanceID)),
             db.sremAsync(tables.unstarted, instanceID),
             this._c.s('redis:hdel', tables.instances, instanceID),
-            this._c.s('redis:publish', instanceID, 'stop'),
         ]);
     }
 

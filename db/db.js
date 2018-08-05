@@ -19,10 +19,8 @@ function create() {
         clients.splice(clients.indexOf(client), 1);
         _quit();
         console.log('quit - count:', clients.length);
-        console.trace();
     };
     console.log('create - count:', clients.length);
-    console.trace();
     return client;
 }
 

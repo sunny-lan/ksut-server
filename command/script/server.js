@@ -5,6 +5,7 @@ const clientCreator = require('../../client/client');
 const EventEmitter = require('events');
 const UserManager = require('../user');
 const exitHook = require('async-exit-hook');
+const {namespace} = require("../namespace.js");
 
 const running = {};
 
@@ -18,27 +19,44 @@ class ServerScriptManager {
             throw new Error('Script is already running');
         if (!info) {
             info = JSON.parse(await db.hgetAsync(tables.startInfo, instanceID));
-            info.owner = UserManager.get(info.owner);
+            info.owner = await UserManager.get(info.owner);
         }
+
         const emitter = new EventEmitter();
-        const client = clientCreator.createClient(info.owner, (...args) => emitter.emit('message', ...args));
         new VM({
             //todo add timeout & detect when script done running
             sandbox: {
+                setInterval,
                 ksut: {
                     on: emitter.on.bind(emitter),
-                    send: client.send,
-                    s: client.s,
                 },
             }
         }).run(await db.hgetAsync(tables.server, info.scriptID));
-        running[instanceID] = client;
+
+        const killMessage = namespace('kill', instanceID);
+        const client = clientCreator.createClient(info.owner, (message, data) => {
+            if (message === killMessage)
+                kill().catch(console.error);//TODO
+            else
+                emitter.emit('message', message, data);
+        });
+        client.s('redis:subscribe', killMessage);
+
+        async function kill() {
+            emitter.emit('stop');
+            client.quit();
+            delete running[instanceID];
+            await db.saddAsync(tables.unstarted, instanceID);
+        }
+
         await db.sremAsync(tables.unstarted, info.scriptID);
+        emitter.emit('start', client.send, client.s);
+        running[instanceID] = kill;
     }
 
     static async init() {
         exitHook(done => {
-            Promise.all(Object.keys(running).forEach(ServerScriptManager.kill))
+            Promise.all(Object.keys(running).forEach(instanceID => running[instanceID]()))
                 .then(() => console.log('successfully exited'))
                 .catch(console.error)
                 .then(done)
@@ -47,15 +65,8 @@ class ServerScriptManager {
         await Promise.all(unstarted.map(ServerScriptManager.run));
     }
 
-    static async kill(instanceID){
-        running[instanceID].quit();
-        delete running[instanceID];
-        await db.saddAsync(tables.unstarted, instanceID);
-    }
-
     async instantiate(instanceID, scriptID) {
-        if (!await db.
-            hexistsAsync(tables.server, scriptID))
+        if (!await db.hexistsAsync(tables.server, scriptID))
             return;
         const startInfo = {
             owner: this._c.user.id,

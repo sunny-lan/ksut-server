@@ -1,6 +1,6 @@
 module.exports = {
     pub: {
-        publish: (ns, channel, message) => [ns(channel), JSON.stringify(message)],
+        publish: (ns, channel, message) => [ns(channel), JSON.stringify(message||'0')],
     },
     sub: {
         subscribe: [
