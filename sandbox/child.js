@@ -1,9 +1,9 @@
 const {VM} = require('vm2');
 const makeMessageClient = require('../client/messageClient');
 const wrapClient = require('../client/advancedClient');
-const {createClient} = require('../client');
 const {extract} = require('../util');
 const EventEmitter = require('events');
+const exitHook=require('async-exit-hook');
 
 process.once('message', args => {
     const emitter = new EventEmitter();
@@ -15,7 +15,8 @@ process.once('message', args => {
 
     let client;
     if (args.createOwnClient) {
-        client = createClient(args.runAs);
+        client = require('../client')(args.runAs);
+        exitHook(client.quit);
     } else {
         client = makeMessageClient(process.send.bind(process));
         process.on('message', client.receive);

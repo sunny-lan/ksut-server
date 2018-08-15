@@ -4,5 +4,6 @@
     "defaultPort":8080,
     "waitTerminate":1000,
     "adminUsername":"admin",
-    "defaultAdminPassword":"pass"
+    "defaultAdminPassword":"pass",
+    "scriptVersion":1
 }

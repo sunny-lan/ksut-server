@@ -5,6 +5,7 @@ const ServerScriptManager = require('./server');
 const ScriptInfoManager = require('./info');
 const tables = require('./tables');
 const {namespace} = require('../namespace');
+const {scriptVersion} = require('../../config');
 
 const infoRegex = /\/\/ksut: info begin([\s\S]*)\/\/ksut: info end/;
 const serverRegex = /\/\/ksut: server code begin([\s\S]*)\/\/ksut: server code end/;
@@ -29,6 +30,9 @@ class ScriptManager {
         if (!scriptInfo)
             throw new Error(`No script info. Script must contain a //ksut: info section`);
         scriptInfo = JSON.parse(scriptInfo[1]);
+        if (scriptInfo.version !== scriptVersion)
+            throw new Error(`Server doesn't support that script version. Please update script to v${scriptVersion}`);
+
         tasks.push(ScriptInfoManager.save(scriptID, scriptInfo));
 
         const clientCode = newCode.match(clientRegex);
@@ -40,23 +44,6 @@ class ScriptManager {
             tasks.push(ServerScriptManager.save(scriptID, serverCode[1]));
 
         await Promise.all(tasks);
-    }
-
-    async instantiate(scriptID) {
-        const instanceID = uuid();
-        await Promise.all([
-            this._c.s('redis:hset', tables.instances, instanceID, scriptID),
-            this._server.instantiate(instanceID, scriptID),
-        ]);
-        return instanceID;
-    }
-
-    async destroyInstance(instanceID) {
-        await Promise.all([
-            this._c.s('redis:publish', namespace('kill', instanceID)),
-            db.sremAsync(tables.unstarted, instanceID),
-            this._c.s('redis:hdel', tables.instances, instanceID),
-        ]);
     }
 
     //client references
@@ -78,6 +65,14 @@ class ScriptManager {
     //server references
     static async _init(...args) {
         return ServerScriptManager.init(...args);
+    }
+
+    async instantiate(scriptID, instanceID) {
+        return this._server.instantiate(scriptID, instanceID);
+    }
+
+    async destroyInstance(instanceID) {
+        return this._server.destroy(instanceID);
     }
 }
 module.exports = ScriptManager;

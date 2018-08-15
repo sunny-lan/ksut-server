@@ -7,6 +7,7 @@ const exitHook = require('exit-hook');
 
 const clients = [];
 
+//TODO make create async
 function create() {
     let client;
     if (isHeroku())
@@ -18,9 +19,9 @@ function create() {
     client.quit = () => {
         clients.splice(clients.indexOf(client), 1);
         _quit();
-        console.log('quit - count:', clients.length);
+        console.log('quit pid:', process.pid, 'count:', clients.length);
     };
-    console.log('create - count:', clients.length);
+    console.log('create pid:', process.pid, 'count:', clients.length);
     return client;
 }
 
@@ -31,4 +32,8 @@ module.exports = {
     db,
 };
 
-exitHook(() => clients.forEach(client => client.quit()));
+exitHook(()=>{
+    //TODO doesn't fully quit
+    console.log(clients.length);
+        clients.forEach(client => client.quit());
+});

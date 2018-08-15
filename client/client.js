@@ -15,7 +15,10 @@ function createClient(user, result = {}) {
     const emitter = new EventEmitter();
     //create redis client for this subscriber
     const sub = create();
-    sub.on('message', (channel, message) => emitter.emit('message', getName(channel), JSON.parse(message)));
+    sub.on('message', (channel, message) => emitter.emit('message', {
+        channel: getName(channel),
+        message: JSON.parse(message)
+    }));
 
     const subEnd = makeEndpoint(sub, true);
     const makeSubEnd = () => subEnd;
@@ -95,6 +98,7 @@ function createClient(user, result = {}) {
     result.s = (command, ...args) => {
         return result.send({command, args});
     };
+    //TODO make quit async
     result.quit = sub.quit.bind(sub);
     result.user = user;
 
