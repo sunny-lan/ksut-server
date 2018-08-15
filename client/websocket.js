@@ -52,12 +52,7 @@ module.exports = (ws) => {
 
         //set up commands
         const client = createClient(user);
-        client.on('message',wsExceptionGuard(
-            (channel, message) => ws.send({
-                type: 'message',
-                channel, message,
-            })
-        ));
+        client.on('message', ws.send);//TODO wsExceptionGuard
         client.once('error', handleError);
 
         //mark device online
