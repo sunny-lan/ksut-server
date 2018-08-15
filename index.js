@@ -6,11 +6,12 @@ const bodyParser = require('body-parser');
 const UserManager = require('./command/user');
 const serializeError = require('serialize-error');
 const ScriptManager = require('./command/script');
+const errorHandler=require('./error');
 
-ScriptManager._init().catch(error => console.error('Failed to initialize scripts', error));
+ScriptManager._init().catch(errorHandler);
 
 process.on('unhandledRejection', (reason, p) => {
-    console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+    console.log('Unhandled Rejection at: Promise', p, 'reason:', reason.stack);
     // application specific logging, throwing an error, or other logic here
 });
 const app = express();

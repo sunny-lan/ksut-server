@@ -3,7 +3,8 @@ const config = require('../config/index');
 const WebSocket = require('ws');
 const serializeError = require('serialize-error');
 const {createClient} = require('./client');
-const createMessageHandler = require('./message');
+const createMessageHandler = require('./messageServer');
+const handleError=require('../error');
 
 const tables = {
     online: 'device-online',
@@ -50,12 +51,14 @@ module.exports = (ws) => {
         const user = await UserManager.login(message.username, message.password);
 
         //set up commands
-        const client = createClient(user, wsExceptionGuard(
+        const client = createClient(user);
+        client.on('message',wsExceptionGuard(
             (channel, message) => ws.send({
                 type: 'message',
                 channel, message,
             })
         ));
+        client.once('error', handleError);
 
         //mark device online
         const {deviceID} = message;
@@ -69,7 +72,7 @@ module.exports = (ws) => {
             ws.ping();
             if (--countdown <= 0)
                 ws.terminate();
-        }), config.heartbeat);
+        }), config.timeout);
 
         //handle messages from user
         const messageHandler = createMessageHandler(client, ws.send);

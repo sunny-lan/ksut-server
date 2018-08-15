@@ -2,6 +2,7 @@ const passwordHash = require('password-hash');
 const uuid = require('uuid/v4');
 const { db } = require('../db/db');
 const config = require('../config/index');
+const errorHandler=require('../error');
 
 const tables = {
     password: 'user-password',
@@ -50,7 +51,7 @@ async function initDB() {
     ]);
     console.log('success');
 }
-initDB().catch(error => console.error('failed initializing db', error));
+initDB().catch(errorHandler);
 
 class User {
     constructor(id) {

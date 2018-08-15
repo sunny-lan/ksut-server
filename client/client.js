@@ -1,19 +1,21 @@
-module.exports={};
+module.exports = {};
 const {getName, namespace} = require('../command/namespace');
 const {create} = require('../db');
 const {makeNamespaced, makeEndpoint, makeSpeced} = require('../command/wrap');
 const spec = require('../command/redis-specs');
 const {db} = require('../db/index');
 const ScriptManager = require('../command/script');
+const EventEmitter = require('events');
+const {extract} = require('../util');
 
 const dbEnd = makeEndpoint(db, true);
 const makeDbEnd = () => dbEnd;
 
-function createClient(user, onMessage, result = {})
-{
+function createClient(user, result = {}) {
+    const emitter = new EventEmitter();
     //create redis client for this subscriber
     const sub = create();
-    sub.on('message', (channel, message) => onMessage(getName(channel), JSON.parse(message)));
+    sub.on('message', (channel, message) => emitter.emit('message', getName(channel), JSON.parse(message)));
 
     const subEnd = makeEndpoint(sub, true);
     const makeSubEnd = () => subEnd;
@@ -42,7 +44,7 @@ function createClient(user, onMessage, result = {})
                 result.send({
                     command: 'redis:publish',
                     args: [namespace('write', key), message],
-                });
+                }).catch(error => emitter.emit('error', error));
                 message.args[keyIdx] = ns(key);
                 return message;
             };
@@ -85,6 +87,8 @@ function createClient(user, onMessage, result = {})
         })
     });
 
+    Object.assign(result, extract(emitter));
+
     result.send = async (message) => {
         return (await send(message)).result;
     };
@@ -97,4 +101,4 @@ function createClient(user, onMessage, result = {})
     return result;
 }
 
-module.exports.createClient=createClient;
+module.exports.createClient = createClient;

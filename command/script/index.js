@@ -25,21 +25,17 @@ class ScriptManager {
         else
             tasks.push(this._c.s('redis:hset', tables.code, scriptID, newCode));
 
-        const scriptInfo = newCode.match(infoRegex),
-            serverCode = newCode.match(serverRegex),
-            clientCode = newCode.match(clientRegex);
+        let scriptInfo = newCode.match(infoRegex);
+        if (!scriptInfo)
+            throw new Error(`No script info. Script must contain a //ksut: info section`);
+        scriptInfo = JSON.parse(scriptInfo[1]);
+        tasks.push(ScriptInfoManager.save(scriptID, scriptInfo));
 
-        if (!serverCode && !clientCode)
-            throw new Error('No code sent. Code must be flagged with "//ksut: ..."');
-
-        await ScriptInfoManager.remove(scriptID);
-
-        if (scriptInfo)
-            tasks.push(ScriptInfoManager.save(scriptID, scriptInfo[1]));
-
+        const clientCode = newCode.match(clientRegex);
         if (clientCode)
             tasks.push(ClientScriptManager.compile(scriptID, clientCode[1]));
 
+        const serverCode = newCode.match(serverRegex);
         if (serverCode)
             tasks.push(ServerScriptManager.save(scriptID, serverCode[1]));
 
@@ -57,7 +53,7 @@ class ScriptManager {
 
     async destroyInstance(instanceID) {
         await Promise.all([
-            this._c.s('redis:publish',namespace('kill', instanceID)),
+            this._c.s('redis:publish', namespace('kill', instanceID)),
             db.sremAsync(tables.unstarted, instanceID),
             this._c.s('redis:hdel', tables.instances, instanceID),
         ]);

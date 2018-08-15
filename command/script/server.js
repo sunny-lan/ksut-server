@@ -1,11 +1,12 @@
 const {db} = require('../../db');
 const tables = require('./tables');
 const {VM} = require('vm2');
-const clientCreator = require('../../client/client');
+const clientCreator = require('../../client');
 const EventEmitter = require('events');
 const UserManager = require('../user');
 const exitHook = require('async-exit-hook');
 const {namespace} = require("../namespace.js");
+const errorHandler=require('../../error');
 
 const running = {};
 
@@ -33,10 +34,15 @@ class ServerScriptManager {
             }
         }).run(await db.hgetAsync(tables.server, info.scriptID));
 
-        const killMessage = namespace('kill', instanceID);
+        const killMessage = namespace('kill', instanceID),
+            restartMessage = namespace('restart', instanceID);
         const client = clientCreator.createClient(info.owner, (message, data) => {
             if (message === killMessage)
-                kill().catch(console.error);//TODO
+                kill().catch(errorHandler);
+            else if (message === restartMessage)
+                kill()
+                    .then(() => ServerScriptManager.run(instanceID, info))
+                    .catch(errorHandler);
             else
                 emitter.emit('message', message, data);
         });
@@ -58,7 +64,7 @@ class ServerScriptManager {
         exitHook(done => {
             Promise.all(Object.keys(running).forEach(instanceID => running[instanceID]()))
                 .then(() => console.log('successfully exited'))
-                .catch(console.error)
+                .catch(errorHandler)
                 .then(done)
         });
         const unstarted = (await db.smembersAsync(tables.unstarted)) || [];

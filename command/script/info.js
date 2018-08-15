@@ -23,14 +23,16 @@ class ScriptInfoManager {
     }
 
     static async save(scriptID, info) {
+        //remove old info
+        await ScriptInfoManager.remove(scriptID);
+
         //add new words to index
         let tasks = [];
-        const newInfo = JSON.parse(info);//check for json error
-        ScriptInfoManager._getWords(newInfo)
+        ScriptInfoManager._getWords(info)
             .forEach(word => tasks.push(db.saddAsync(tables.index(word), scriptID)));
 
         //add info to db
-        tasks.push(db.hsetAsync(tables.info, scriptID, info));
+        tasks.push(db.hsetAsync(tables.info, scriptID, JSON.stringify(info)));
 
         await Promise.all(tasks);
     }

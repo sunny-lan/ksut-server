@@ -1,6 +1,6 @@
 {
     "version":7,
-    "heartbeat":1000,
+    "timeout":1000,
     "defaultPort":8080,
     "waitTerminate":1000,
     "adminUsername":"admin",
