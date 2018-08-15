@@ -50,6 +50,7 @@ function createCommandWaiter(send, error) {
                 openPromises[thisID] = {resolve, reject};
 
                 //cancel command if it hasn't been responded to for a long time
+                //TODO command timeout extensions
                 setTimeout(() => {
                     delete openPromises[thisID];
                     reject(new Error('Command timed out'));

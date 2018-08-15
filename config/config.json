@@ -2,7 +2,7 @@
     "version":7,
     "timeout":1000,
     "defaultPort":8080,
-    "waitTerminate":1000,
+    "waitTerminate":500,
     "adminUsername":"admin",
     "defaultAdminPassword":"pass",
     "scriptVersion":1

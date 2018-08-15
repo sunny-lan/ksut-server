@@ -22,7 +22,6 @@ function create() {
         console.log('quit pid:', process.pid, 'count:', clients.length);
     };
     console.log('create pid:', process.pid, 'count:', clients.length);
-    console.trace();
     return client;
 }
 
@@ -35,6 +34,5 @@ module.exports = {
 
 exitHook(()=>{
     //TODO doesn't fully quit
-    console.log(clients.length);
         clients.forEach(client => client.quit());
 });

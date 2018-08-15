@@ -46,6 +46,20 @@ class ScriptManager {
         await Promise.all(tasks);
     }
 
+    async instantiate(scriptID, instanceID = uuid()) {
+        await Promise.all([
+            this._c.s('redis:hset', tables.instances, instanceID, scriptID),
+            this._server.instantiate(scriptID, instanceID),
+        ]);
+    }
+
+    async destroyInstance(instanceID) {
+        await Promise.all([
+            this._c.s('redis:hdel', tables.instances, instanceID),
+            this._server.destroy(instanceID),
+        ]);
+    }
+
     //client references
 
     static async fetch(...args) {
@@ -65,14 +79,6 @@ class ScriptManager {
     //server references
     static async _init(...args) {
         return ServerScriptManager.init(...args);
-    }
-
-    async instantiate(scriptID, instanceID) {
-        return this._server.instantiate(scriptID, instanceID);
-    }
-
-    async destroyInstance(instanceID) {
-        return this._server.destroy(instanceID);
     }
 }
 module.exports = ScriptManager;

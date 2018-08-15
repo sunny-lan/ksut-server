@@ -69,41 +69,36 @@ class ServerScriptManager {
         await Promise.all(unstarted.map(ServerScriptManager.run));
     }
 
-    async instantiate(scriptID, instanceID = uuid()) {
-        //check if script exists
+    async instantiate(scriptID, instanceID) {
+        //check if server script exists
         if (!await db.hexistsAsync(tables.server, scriptID))
             return;
 
         await Promise.all([
-            //store script id
-            this._c.s('redis:hset', tables.instances, instanceID, scriptID),
             //store start info
             db.hsetAsync(tables.startInfo, instanceID, JSON.stringify({
                 ownerID: this._c.user.id,
-                scriptID: scriptID,
+                scriptID,
             })),
             //add to unstarted list then run
             (async () => {
                 await db.saddAsync(tables.unstarted, instanceID);
                 await ServerScriptManager.run(instanceID, {
                     owner: this._c.user,
-                    scriptID: scriptID,
+                    scriptID,
                 });
             })(),
         ]);
-
-        return instanceID;
     }
 
-    async destroy(instanceID) {
-        await Promise.all([
-            (async () => {
-                await this._c.s('redis:publish', namespace('kill', instanceID));
-                await wait(waitTerminate);
-                await db.sremAsync(tables.unstarted, instanceID);
-            })(),
-            this._c.s('redis:hdel', tables.instances, instanceID),
-        ]);
+    async destroy(instanceID) {//TODO security risk
+        //check if server script exists
+        if (!await db.hexistsAsync(tables.startInfo, instanceID))
+            return;
+
+        await this._c.s('redis:publish', namespace('kill', instanceID));
+        await wait(waitTerminate);
+        await db.sremAsync(tables.unstarted, instanceID);
     }
 
     static async save(scriptID, code) {
