@@ -29,10 +29,10 @@
     "stopword": "^0.1.10",
     "uuid": "^3.3.2",
     "vm2": "^3.6.2",
-    "ws": "^5.2.1"
+    "ws": "^5.2.1",
+    "deserialize-error": "^0.0.3"
   },
   "devDependencies": {
-    "deserialize-error": "^0.0.3",
     "eslint": "^5.0.1",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.13.0",
