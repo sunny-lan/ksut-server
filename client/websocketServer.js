@@ -35,8 +35,6 @@ let deviceID;
     //wrap ws in stuff
     ws.terminate = ws.terminate.bind(ws);
     const send = guardServer(data => {
-        if (deviceID)
-        console.log('send ', data);
         if (ws.readyState === WebSocket.OPEN)
             return ws.send(JSON.stringify(data));
         else
@@ -86,8 +84,6 @@ let deviceID;
         //handle messages from user
         const messageHandler = createMessageHandler(client, send);
         ws.on('message', guardClient(data => {
-            if (deviceID)
-            console.log('recv ', data);
             messageHandler(JSON.parse(data));
         }));
 
