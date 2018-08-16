@@ -33,9 +33,19 @@ function together(...funcs) {
     return (...args) => funcs.map(func => func(...args));
 }
 
+function guard(callback,handle) {
+    return async (...args) => {
+        try {
+            return await callback(...args);
+        } catch (error) {
+            handle(error);
+        }
+    }
+}
+
 const utils = {
     extract, convertRedisRange, wait, coalesce, get,
-    together
+    together,guard,
 };
 
 module.exports = utils;

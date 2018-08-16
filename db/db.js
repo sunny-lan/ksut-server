@@ -22,7 +22,6 @@ function create() {
         console.log('quit pid:', process.pid, 'count:', clients.length);
     };
     console.log('create pid:', process.pid, 'count:', clients.length);
-    console.trace();
     return client;
 }
 

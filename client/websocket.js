@@ -4,87 +4,95 @@ const WebSocket = require('ws');
 const serializeError = require('serialize-error');
 const {createClient} = require('./client');
 const createMessageHandler = require('./messageServer');
-const handleError=require('../error');
+const handleError = require('../error');
+const {guard} = require('../util');
 
 const tables = {
     online: 'device-online',
 };
 
 module.exports = (ws) => {
-    //wrap ws in stuff
-    ws.terminate = ws.terminate.bind(ws);
-    const _send = ws.send.bind(ws);
-    ws.send = (data) => {
-        if (ws.readyState === WebSocket.OPEN)
-            return _send(JSON.stringify(data));
-        else
-            ws.terminate();
-    };
-    function wsExceptionGuard(action) {
-        return (...args) => {
-            //try to run the action as a promise
-            (async () => action(...args))().catch(error => {
-                ws.send({
-                    //caught errors are sent to the client
-                    type: 'error',
-                    error: serializeError(error)
-                });
-                //kill connection on error
-                setTimeout(ws.terminate, config.waitTerminate);
+    function guardClient(callback) {
+        return guard(callback, error => {
+            ws.send({
+                type: 'error',
+                error: serializeError(error),
             });
-            //TODO:handle return values
-        };
+            setTimeout(ws.terminate, config.waitTerminate);
+        });
     }
 
+    function guardServer(callback, log) {
+        return guard(callback, error => {
+            if (log)
+                handleError(error);
+            ws.terminate();
+        });
+    }
+
+    //wrap ws in stuff
+    ws.terminate = ws.terminate.bind(ws);
+    const send = guardServer(data => {
+        if (ws.readyState === WebSocket.OPEN)
+            return ws.send(JSON.stringify(data));
+        else
+            ws.terminate();
+    });
+
     //init message, client should check version match
-    ws.send({
+    send({
         type: 'init',
         version: config.version
     });
 
     //wait for client to login
-    ws.once('message', wsExceptionGuard(async data => {
+    ws.once('message', guardClient(async data => {
         //check login
         const message = JSON.parse(data);
         if (message.type !== 'login')
             throw new Error('Not logged in');
         const user = await UserManager.login(message.username, message.password);
 
+        //set up heartbeat
+        const heartbeat = guardServer(() => {
+            ws.ping();
+            function resolve() {
+                clearTimeout(timeout);
+                setTimeout(heartbeat, config.timeout);
+            }
+
+            ws.once('pong', resolve);
+            const timeout = setTimeout(function reject() {
+                ws.removeListener('pong', resolve);
+                ws.terminate();
+            }, config.timeout);
+        });
+        heartbeat();
+
         //set up commands
         const client = createClient(user);
-        client.on('message', ws.send);//TODO wsExceptionGuard
         client.once('error', handleError);
+        client.on('message', send);
 
         //mark device online
         const {deviceID} = message;
         if (deviceID)
-            await client.commands.redis.hset(tables.online, deviceID, 1);
-
-        //tell user they were successful
-        ws.send({type: 'loginSuccess'});
-
-        //set up heartbeat
-        let countdown = 2;
-        ws.on('pong', () => countdown = 2);
-        const pingTimer = setInterval(wsExceptionGuard(() => {
-            ws.ping();
-            if (--countdown <= 0)
-                ws.terminate();
-        }), config.timeout);
+            await client.s('redis:hset', tables.online, deviceID, 1);
 
         //handle messages from user
-        const messageHandler = createMessageHandler(client, ws.send);
-        ws.on('message', wsExceptionGuard(data => messageHandler(JSON.parse(data))));
+        const messageHandler = createMessageHandler(client, send);
+        ws.on('message', guardClient(data => messageHandler(JSON.parse(data))));
 
         //clean up on disconnect
-        ws.on('close', async() => {
+        ws.once('close', guardServer(async () => {
             //clean up redis
             client.quit();
-            //stop pinging
-            clearInterval(pingTimer);
             //mark device offline
             if (deviceID)
-                await client.commands.redis.hset(tables.online, deviceID, 0);
-        });
+                await client.s('redis:hset', tables.online, deviceID, 0);
+        }, true));
+
+        //tell user they were successful
+        send({type: 'loginSuccess'});
     }));
 };
