@@ -16,7 +16,7 @@ module.exports = (ws) => {
 
     function guardClient(callback) {
         return guard(callback, error => {
-            ws.send({
+            send({
                 type: 'error',
                 error: serializeError(error),
             });
