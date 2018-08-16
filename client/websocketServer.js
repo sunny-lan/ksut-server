@@ -31,10 +31,12 @@ module.exports = (ws) => {
             ws.terminate();
         });
     }
-
+let deviceID;
     //wrap ws in stuff
     ws.terminate = ws.terminate.bind(ws);
     const send = guardServer(data => {
+        if (deviceID)
+        console.log('send ', data);
         if (ws.readyState === WebSocket.OPEN)
             return ws.send(JSON.stringify(data));
         else
@@ -77,13 +79,17 @@ module.exports = (ws) => {
         heartbeat();
 
         //mark device online
-        const {deviceID} = message;
+        deviceID = message.deviceID;
         if (deviceID)
             await client.s('redis:hset', tables.online, deviceID, 1);
 
         //handle messages from user
         const messageHandler = createMessageHandler(client, send);
-        ws.on('message', guardClient(data => messageHandler(JSON.parse(data))));
+        ws.on('message', guardClient(data => {
+            if (deviceID)
+            console.log('recv ', data);
+            messageHandler(JSON.parse(data));
+        }));
 
         //clean up on disconnect
         ws.once('close', guardServer(async () => {
