@@ -60,7 +60,7 @@ let deviceID;
         //set up commands
         client = createClient(user);
         client.once('error', handleError);
-        client.on('message', send);
+        client.on('message', message=>client.send({...message,type:'message'}));
 
         //TODO use better heartbeat
         const heartbeat = guardServer(() => {
