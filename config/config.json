@@ -1,6 +1,7 @@
 {
     "version":7,
     "timeout":1000,
+  "forgiveness":100,
     "defaultPort":8080,
     "waitTerminate":500,
     "adminUsername":"admin",

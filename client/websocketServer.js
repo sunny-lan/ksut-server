@@ -12,6 +12,8 @@ const tables = {
 };
 
 module.exports = (ws) => {
+    let client;
+
     function guardClient(callback) {
         return guard(callback, error => {
             ws.send({
@@ -53,7 +55,12 @@ module.exports = (ws) => {
             throw new Error('Not logged in');
         const user = await UserManager.login(message.username, message.password);
 
-        //set up heartbeat
+        //set up commands
+        client = createClient(user);
+        client.once('error', handleError);
+        client.on('message', send);
+
+        //TODO use better heartbeat
         const heartbeat = guardServer(() => {
             ws.ping();
             function resolve() {
@@ -69,11 +76,6 @@ module.exports = (ws) => {
         });
         heartbeat();
 
-        //set up commands
-        const client = createClient(user);
-        client.once('error', handleError);
-        client.on('message', send);
-
         //mark device online
         const {deviceID} = message;
         if (deviceID)
@@ -85,8 +87,6 @@ module.exports = (ws) => {
 
         //clean up on disconnect
         ws.once('close', guardServer(async () => {
-            //clean up redis
-            client.quit();
             //mark device offline
             if (deviceID)
                 await client.s('redis:hset', tables.online, deviceID, 0);
@@ -94,5 +94,12 @@ module.exports = (ws) => {
 
         //tell user they were successful
         send({type: 'loginSuccess'});
+    }));
+
+    //clean up on disconnect
+    ws.once('close', guardServer(() => {
+        //clean up redis
+        if (client)
+            client.quit();
     }));
 };
