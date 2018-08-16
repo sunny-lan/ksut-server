@@ -58,7 +58,10 @@ module.exports = (ws) => {
         //mark device online
         const {deviceID} = message;
         if (deviceID)
-            client.commands.redis.hset(tables.online, deviceID, 1);
+            await client.commands.redis.hset(tables.online, deviceID, 1);
+
+        //tell user they were successful
+        ws.send({type: 'loginSuccess'});
 
         //set up heartbeat
         let countdown = 2;
@@ -73,18 +76,15 @@ module.exports = (ws) => {
         const messageHandler = createMessageHandler(client, ws.send);
         ws.on('message', wsExceptionGuard(data => messageHandler(JSON.parse(data))));
 
-        //tell user they were successful
-        ws.send({type: 'loginSuccess'});
-
         //clean up on disconnect
-        ws.on('close', () => {
+        ws.on('close', async() => {
+            //clean up redis
+            client.quit();
             //stop pinging
             clearInterval(pingTimer);
             //mark device offline
             if (deviceID)
-                client.commands.redis.hset(tables.online, deviceID, 0);
-            //clean up redis
-            client.quit();
+                await client.commands.redis.hset(tables.online, deviceID, 0);
         });
     }));
 };
