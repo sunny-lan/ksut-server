@@ -1,7 +1,6 @@
 const {db} = require('../../db');
 const tables = require('./tables');
 const UserManager = require('../user');
-const exitHook = require('async-exit-hook');
 const errorHandler = require('../../error');
 const {waitTerminate} = require('../../config');
 const sandbox = require('../../sandbox');
@@ -9,6 +8,7 @@ const {namespace} = require('../namespace');
 const {wait} = require('../../util');
 const uuid = require('uuid/v4');
 const wrapClient = require('../../client/advancedClient');
+const cleanup=require('../../cleanup');
 
 class ServerScriptManager {
     constructor(client) {
@@ -64,7 +64,7 @@ class ServerScriptManager {
         });
 
         //kill on process termination
-        exitHook(done => kill().catch(errorHandler).then(done));
+        cleanup.add(kill);
     }
 
     static async init() {

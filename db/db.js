@@ -1,27 +1,32 @@
 const bluebird = require('bluebird');
 const redis = require('redis');
 const {isHeroku} = require('../config/dev');
+const {together}=require('../util');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
-const exitHook = require('exit-hook');
-
-const clients = [];
-
+const cleanup = require('../cleanup');
+let count = 0;
 //TODO make create async
 function create() {
+    count++;
+    console.log('create pid:', process.pid, 'count:', count);
+
     let client;
     if (isHeroku())
         client = redis.createClient(process.env.REDIS_URL);
     else
         client = redis.createClient(require('./redis-config'));
-    clients.push(client);
-    const _quit = client.quit.bind(client);
+
+    const _quit = together(client.quit.bind(client),()=>{
+        count--;
+        console.log('quit pid:', process.pid, 'count:', count);
+    });
+    cleanup.add(_quit, 1);
     client.quit = () => {
-        clients.splice(clients.indexOf(client), 1);
+        cleanup.remove(_quit, 1);
         _quit();
-        console.log('quit pid:', process.pid, 'count:', clients.length);
     };
-    console.log('create pid:', process.pid, 'count:', clients.length);
+
     return client;
 }
 
@@ -31,8 +36,3 @@ module.exports = {
     create,
     db,
 };
-
-exitHook(()=>{
-    //TODO doesn't fully quit
-        clients.forEach(client => client.quit());
-});
