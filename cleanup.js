@@ -25,6 +25,7 @@ module.exports = {
         hooks[priority] = hooks[priority] || [];
         hooks[priority].push(callback);
         console.log(hooks);
+        console.trace();
     },
     remove(callback, priority = 0){
         hooks[priority].splice(hooks[priority].indexOf(callback), 1);
