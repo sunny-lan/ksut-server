@@ -6,17 +6,18 @@ const hooks = [];
     'SIGBUS', 'SIGFPE', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGTERM'
 ].forEach(sig => process.on(sig, () => {
     console.log('recieved signal: ' + sig);
-    if (typeof sig === "string") {
-        hooks.reduce(
-            (promise, list) => promise.then(
-                () => Promise.all(list.map(func => func()))
-            ),
-            Promise.resolve()
-        ).then(process.exit).catch(error => {
-            errorHandler(error);
-            process.exit(1);
-        });
-    }
+    hooks.reduce(
+        (promise, list) => promise.then(
+            () => {
+                console.log(list);
+                return Promise.all(list.map(func => func()))
+            }
+        ),
+        Promise.resolve()
+    ).then(process.exit).catch(error => {
+        errorHandler(error);
+        process.exit(1);
+    });
 }));
 
 module.exports = {
