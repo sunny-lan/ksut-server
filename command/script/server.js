@@ -43,7 +43,7 @@ class ServerScriptManager {
         const instanceClient = wrapClient(instance.client);
 
         //subscribe to signals
-        const sigkill = namespace('kill', instanceID), sigrestart = namespace(instanceID, 'restart');
+        const sigkill = namespace('kill', instanceID), sigrestart = namespace('restart', instanceID);
         instanceClient.s('redis:subscribe', sigkill);
         instanceClient.s('redis:subscribe', sigrestart);
         let killed = false;

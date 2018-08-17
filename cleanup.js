@@ -8,10 +8,7 @@ const hooks = [];
     console.log('recieved signal: ' + sig);
     hooks.reduce(
         (promise, list) => promise.then(
-            () => {
-                console.log(list);
-                return Promise.all(list.map(func => func()))
-            }
+            () => Promise.all(list.map(func => func()))
         ),
         Promise.resolve()
     ).then(process.exit).catch(error => {
@@ -24,8 +21,6 @@ module.exports = {
     add(callback, priority = 0) {
         hooks[priority] = hooks[priority] || [];
         hooks[priority].push(callback);
-        console.log(hooks);
-        console.trace();
     },
     remove(callback, priority = 0){
         hooks[priority].splice(hooks[priority].indexOf(callback), 1);
