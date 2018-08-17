@@ -35,6 +35,9 @@ class ServerScriptManager {
         const instance = sandbox.run({
             code,
             runAs: info.owner,
+            scriptParams: {
+                instanceID,
+            }
         });
 
         const instanceClient = wrapClient(instance.client);

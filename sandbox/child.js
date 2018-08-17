@@ -9,7 +9,10 @@ process.once('message', args => {
     const emitter = new EventEmitter();
     new VM({
         sandbox: {
-            ksut: extract(emitter),
+            ksut: {
+                ...extract(emitter),
+                ...args.scriptParams,
+            },
         }
     }).run(args.code);
 

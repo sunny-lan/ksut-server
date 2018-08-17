@@ -16,6 +16,7 @@ function createClient(user, result = {}) {
     //create redis client for this subscriber
     const sub = create();
     sub.on('message', (channel, message) => emitter.emit('message', {
+        type:'message',
         channel: getName(channel),
         message: JSON.parse(message)
     }));

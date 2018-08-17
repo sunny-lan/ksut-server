@@ -9,8 +9,10 @@ function run(args) {
     let client;
     if (!args.createOwnClient) {
         client = Client.createClient(args.runAs);
-        child.on('message', makeMessageHandler(client, child.send.bind(child)));
+        const handler = makeMessageHandler(client, data => child.send(data));
+        child.on('message', handler);
         child.on('exit', client.quit);
+        client.on('message', data => child.send(data));
     }
     child.send(args);
     return {
