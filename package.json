@@ -18,6 +18,7 @@
     "babel-plugin-transform-react-jsx": "^6.24.1",
     "bluebird": "^3.5.1",
     "body-parser": "^1.18.3",
+    "deserialize-error": "^0.0.3",
     "exit-hook": "^2.0.0",
     "express": "^4.16.3",
     "express-ws": "^4.0.0",
@@ -29,8 +30,7 @@
     "stopword": "^0.1.10",
     "uuid": "^3.3.2",
     "vm2": "^3.6.2",
-    "ws": "^5.2.1",
-    "deserialize-error": "^0.0.3"
+    "ws": "^5.2.1"
   },
   "devDependencies": {
     "eslint": "^5.0.1",

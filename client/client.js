@@ -62,6 +62,12 @@ function createClient(user, result = {}) {
         write: makeDbEnd,
     });
 
+    function checkNull(data){
+        if(data.args.includes(undefined) || data.args.includes(null))
+            throw new Error('Argument undefined/null');
+        return data;
+    }
+
     function makeOutputMapper(mapper) {
         if (Array.isArray(mapper))
             return message => {
@@ -74,7 +80,7 @@ function createClient(user, result = {}) {
     const denamespacer = makeSpeced(spec, makeOutputMapper);
 
     async function redis(message) {
-        return denamespacer(await redisEnd(namespacer(message)));
+        return denamespacer(await redisEnd(checkNull(namespacer(message))));
     }
 
     const send = makeNamespaced({
@@ -93,7 +99,7 @@ function createClient(user, result = {}) {
 
     Object.assign(result, extract(emitter));
 
-    result.send = async (message) => {
+    result.send = async message => {
         return (await send(message)).result;
     };
     result.s = (command, ...args) => {
