@@ -23,6 +23,7 @@
     "express": "^4.16.3",
     "express-ws": "^4.0.0",
     "metaphone": "^1.0.3",
+    "mustache-express": "^1.2.7",
     "password-hash": "^1.2.2",
     "redis": "^2.8.0",
     "serialize-error": "^2.1.0",
